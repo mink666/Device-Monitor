@@ -1,0 +1,35 @@
+﻿.btn-custom-login {
+    background-color: #007bff;
+    color: white;
+    border: 1px solid #007bff;
+}
+
+    .btn-custom-login:hover {
+        color: #007bff;
+        background-color: white;
+        border: 1px solid #007bff;
+    }
+
+.btn-custom-google {
+    background-color: #db4437;
+    color: white;
+    border: 1px solid #db4437;
+}
+
+    .btn-custom-google:hover {
+        color: #db4437;
+        background-color: white;
+        border: 1px solid #db4437;
+    }
+
+.btn-custom-microsoft {
+    background-color: #2b579a;
+    color: white;
+    border: 1px solid #2b579a;
+}
+
+    .btn-custom-microsoft:hover {
+        color: #2b579a;
+        background-color: white;
+        border: 1px solid #2b579a;
+    }

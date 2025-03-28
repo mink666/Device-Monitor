@@ -14,12 +14,12 @@ namespace LoginWeb.Controllers
 {
     [ApiController]
     [Route("api/auth")] // Base route
-    public class AuthController : ControllerBase
+    public class AuthController : ControllerBase //use API controller
     {
         private readonly UserManager<IdentityUser> _userManager; // For user management
         private readonly SignInManager<IdentityUser> _signInManager; // For sign-in and sign-out
-        private readonly EmailService _emailService;
-        private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService; // For sending emails
+        private readonly IConfiguration _configuration; // For reading app settings
 
 
         public AuthController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, EmailService emailService, IConfiguration configuration)
@@ -33,8 +33,8 @@ namespace LoginWeb.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            var user = new IdentityUser { UserName = request.Username, Email = request.Email };
-            string generatedPassword = GenerateSecurePassword();
+            var user = new IdentityUser { UserName = request.Username, Email = request.Email }; 
+            string generatedPassword = GenerateSecurePassword(); 
 
             var result = await _userManager.CreateAsync(user, generatedPassword);
             if (!result.Succeeded)
@@ -106,28 +106,28 @@ namespace LoginWeb.Controllers
             return Redirect("/Home/Index");
         }
 
-        //[HttpGet("login-microsoft")] // Redirect to Microsoft login page
-        //public IActionResult LoginWithMicrosoft()
-        //{
-        //    var redirectUrl = Url.Action("MicrosoftResponse", "Auth", null, Request.Scheme);
-        //    var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
-        //    return Challenge(properties, "Microsoft");
-        //}
+        [HttpGet("login-microsoft")] // Redirect to Microsoft login page
+        public IActionResult LoginWithMicrosoft()
+        {
+            var redirectUrl = Url.Action("MicrosoftResponse", "Auth", null, Request.Scheme);
+            var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+            return Challenge(properties, "Microsoft");
+        }
 
-        //[HttpGet("microsoft-response")] // Handle Microsoft response
-        //public async Task<IActionResult> MicrosoftResponse()
-        //{
-        //    var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        //    if (!result.Succeeded)
-        //        return Unauthorized(new { message = "Microsoft login failed." });
-        //    var claims = result.Principal.Claims;
-        //    var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
-        //    if (string.IsNullOrEmpty(email))
-        //        return Unauthorized(new { message = "Microsoft login failed: No email received." });
-        //    HttpContext.Session.SetString("Username", email);
-        //    HttpContext.Session.SetString("isLogin", "true");
-        //    return Redirect("/Home/Index");
-        //}
+        [HttpGet("microsoft-response")] // Handle Microsoft response
+        public async Task<IActionResult> MicrosoftResponse()
+        {
+            var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            if (!result.Succeeded)
+                return Unauthorized(new { message = "Microsoft login failed." });
+            var claims = result.Principal.Claims;
+            var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized(new { message = "Microsoft login failed: No email received." });
+            HttpContext.Session.SetString("Username", email);
+            HttpContext.Session.SetString("isLogin", "true");
+            return Redirect("/Home/Index");
+        }
         private string GenerateSecurePassword(int length = 12)
         {
             const string validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*";
