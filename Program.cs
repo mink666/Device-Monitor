@@ -13,8 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using LoginWeb.Services;
 
-
-
 var builder = WebApplication.CreateBuilder(args);
 // Register the AppDbContext service using your connection string
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -40,6 +38,11 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
 // Configure Identity with Cookie Authentication
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
@@ -63,7 +66,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 })
 .AddCookie()
 .AddGoogle(googleOptions =>
@@ -71,13 +74,13 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     googleOptions.SaveTokens = true;
+})
+.AddMicrosoftAccount(microsoftOptions =>
+{
+    microsoftOptions.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"];
+    microsoftOptions.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"];
+    microsoftOptions.SaveTokens = true;
 });
-//.AddMicrosoftAccount(microsoftOptions =>
-//{
-//    microsoftOptions.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"];
-//    microsoftOptions.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"];
-//    microsoftOptions.SaveTokens = true;
-//});
 
 
 // Add logging services
