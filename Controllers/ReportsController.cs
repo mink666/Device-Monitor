@@ -1,0 +1,38 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
+using LoginWeb.Data;
+using LoginWeb.Models;
+using Microsoft.AspNetCore.Authorization;
+
+public class ReportsController : Controller
+{
+    private readonly AppDbContext _context;
+
+    public ReportsController(AppDbContext context) 
+    {
+        _context = context;
+    }
+
+    [Authorize] //ASP.NET Core Authorization
+    [HttpPost]
+    public IActionResult Generate(string title)
+    {
+        // Check if the user is logged in using session
+        //if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))
+        //{
+        //    return Unauthorized("You must be logged in to access reports.");
+        //}
+
+        List<Device> devices = _context.Devices.ToList();
+
+        if (devices == null || devices.Count == 0)
+        {
+            Console.WriteLine("❌ No devices found.");
+            return BadRequest("No devices available.");
+        }
+        byte[] pdfBytes = PdfReportService.GenerateDeviceReport(title, devices);
+        Console.WriteLine("✅ PDF Generated Successfully.");
+        return File(pdfBytes, "application/pdf", $"{title}.pdf");
+    }
+}
