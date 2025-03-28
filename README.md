@@ -8,7 +8,7 @@ Device-Monitor is a web application built using ASP.NET Core MVC with REST API c
 The objective of this project is to build hands-on experience with:
 -  **ASP.NET Core MVC** - Understanding Model-View-Controller architecture  
 - **CRUD Operations** - Implementing Create, Read, Update, Delete functionality  
-- **Google & Microsoft OAuth** - Third-party authentication  ✅ CRUD Operations - Implementing Create, Read, Update, Delete functionality
+- **Google & Microsoft OAuth** - Third-party authentication 
 - **SNMP Integration** - For device communication and status monitoring
 - **QuestPDF** - Generate dynamic PDF reports
 - **MailKit** - Send emails (e.g., password recovery, notifications)
