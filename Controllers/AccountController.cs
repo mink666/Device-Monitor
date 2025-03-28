@@ -22,7 +22,6 @@ namespace LoginWeb.Controllers
             // Generate a random nonce
             string nonce = Guid.NewGuid().ToString();
             HttpContext.Session.SetString("LoginNonce", nonce);
-            ViewData["Nonce"] = nonce; // Pass to client
             return View();
         }
         public IActionResult Register()

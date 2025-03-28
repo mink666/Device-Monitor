@@ -19,20 +19,18 @@ public class ReportsController : Controller
     public IActionResult Generate(string title)
     {
         // Check if the user is logged in using session
-        //if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))
-        //{
-        //    return Unauthorized("You must be logged in to access reports.");
-        //}
+        //if (HttpContext.Session.GetString("isLogin") == null)
+            //{
+            //    return Unauthorized("You must be logged in to access reports.");
+            //}
 
         List<Device> devices = _context.Devices.ToList();
 
         if (devices == null || devices.Count == 0)
         {
-            Console.WriteLine("❌ No devices found.");
             return BadRequest("No devices available.");
         }
         byte[] pdfBytes = PdfReportService.GenerateDeviceReport(title, devices);
-        Console.WriteLine("✅ PDF Generated Successfully.");
         return File(pdfBytes, "application/pdf", $"{title}.pdf");
     }
 }
