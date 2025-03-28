@@ -68,13 +68,6 @@ namespace LoginWeb.Controllers
             return Ok(new { message = "Login successful", redirectUrl = "/Home/Index" });
         }
 
-        [HttpGet("logout")]
-        public IActionResult Logout()
-        {
-            HttpContext.Session.Clear(); // Clear session data
-            return RedirectToAction("Login", "Auth");
-        }
-
         [HttpGet("login-google")] // Redirect to Google login page
         public IActionResult LoginWithGoogle()
         {

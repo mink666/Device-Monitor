@@ -19,9 +19,6 @@ namespace LoginWeb.Controllers
 
         public IActionResult Login()
         {
-            // Generate a random nonce
-            string nonce = Guid.NewGuid().ToString();
-            HttpContext.Session.SetString("LoginNonce", nonce);
             return View();
         }
         public IActionResult Register()
@@ -30,8 +27,8 @@ namespace LoginWeb.Controllers
             }
             public IActionResult Logout()
             {
-            HttpContext.Session.Remove("isLogin"); // ✅ Clear session
-            return RedirectToAction("Login"); // ✅ Redirect to login page
+            HttpContext.Session.Remove("isLogin");
+            return RedirectToAction("Login"); 
             }
         [HttpGet]
         public async Task<IActionResult> ConfirmEmail(string userId, string token)
