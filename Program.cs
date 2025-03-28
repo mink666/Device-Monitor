@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using LoginWeb.Services;
 
 
 
@@ -18,6 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Register the AppDbContext service using your connection string
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<EmailService>();
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -68,13 +71,13 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     googleOptions.SaveTokens = true;
-})
-.AddMicrosoftAccount(microsoftOptions =>
-{
-    microsoftOptions.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"];
-    microsoftOptions.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"];
-    microsoftOptions.SaveTokens = true;
 });
+//.AddMicrosoftAccount(microsoftOptions =>
+//{
+//    microsoftOptions.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"];
+//    microsoftOptions.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"];
+//    microsoftOptions.SaveTokens = true;
+//});
 
 
 // Add logging services

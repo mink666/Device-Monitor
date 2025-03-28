@@ -11,18 +11,13 @@
 
             <div id="registerForm">
                 <div class="mb-3">
+                    <label for="email" class="form-label">Email:</label>
+                    <input type="email" class="form-control" id="email" required />
+                </div>
+                <div class="mb-3">
                     <label for="username" class="form-label">Username:</label>
                     <input type="text" class="form-control" id="username" required />
                 </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password:</label>
-                    <input type="password" class="form-control" id="password" required />
-                </div>
-                <div class="mb-3">
-                    <label for="confirmPassword" class="form-label">Confirm Password:</label>
-                    <input type="password" class="form-control" id="confirmPassword" required />
-                </div>
-
                 <button type="button" onclick="register()" class="btn btn-primary w-100">Register</button>
             </div>
 
@@ -33,53 +28,4 @@
     </div>
 </div>
 
-<script>
-        async function register() {
-        const username = document.getElementById("username").value.trim();
-        const password = document.getElementById("password").value.trim();
-        const confirmPassword = document.getElementById("confirmPassword").value.trim();
-
-        if (!username || !password || !confirmPassword) {
-            showError("All fields are required.");
-            return;
-        }
-        if (password !== confirmPassword) {
-            showError("Passwords do not match.");
-            return;
-        }
-
-        const payload = { username, password, confirmPassword };
-
-        try {
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.errors) {
-                    let errorMessages = data.errors.map(e => e.description).join("\n");
-                    showError(errorMessages);
-                } else {
-                    showError(data.message || "Registration failed.");
-                }
-                return;
-            }
-
-            alert(data.message);
-            window.location.href = '/Account/Login';
-        } catch (error) {
-            console.error("❌ Registration Error:", error);
-            showError("Network error. Try again.");
-        }
-    }
-
-    function showError(message) {
-        const errorMessageDiv = document.getElementById("errorMessage");
-        errorMessageDiv.textContent = message;
-        errorMessageDiv.classList.remove("d-none");
-    }
-</script>
+<script src="~/js/Register.js"></script>
