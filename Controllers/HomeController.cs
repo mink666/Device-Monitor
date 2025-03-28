@@ -17,7 +17,6 @@ public class HomeController : Controller
         _logger = logger;
         _context = context;
     }
-    //[Authorize(AuthenticationSchemes = "CustomScheme")]
     public IActionResult Index()
     {
         if (HttpContext.Session.GetString("isLogin") == null)

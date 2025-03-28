@@ -47,8 +47,7 @@ namespace LoginWeb.Controllers
         <p>Your login details:</p>
         <p><strong>Username:</strong> {user.UserName}</p>
         <p><strong>Password:</strong> {generatedPassword}</p>
-        <p>Please confirm your email by clicking <a href='{confirmationLink}'>here</a>.</p>
-    ";
+        <p>Please confirm your email by clicking <a href='{confirmationLink}'>here</a>.</p>";
 
             await _emailService.SendEmailAsync(user.Email, "Confirm Your Account & Your Login Credentials", emailBody);
 
