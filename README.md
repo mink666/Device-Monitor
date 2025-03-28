@@ -18,7 +18,7 @@ The objective of this project is to build hands-on experience with:
 |-------------|-------------|  
 | **ASP.NET Core MVC** | Backend framework for web app development |  
 | **Entity Framework Core** | ORM for database management |  
-| **SQL Server** / PostgreSQL | Relational database |  
+| **SQL Server** | Relational database |  
 | **Google & Microsoft OAuth** | Third-party authentication |  
-| **Bootstrap / Tailwind CSS** | Frontend UI styling |  
+| **Bootstrap CSS** | Frontend UI styling |  
 
