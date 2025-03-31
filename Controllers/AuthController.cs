@@ -1,9 +1,10 @@
-﻿using LoginWeb.Services; // Add this using directive
+﻿using LoginWeb.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Net;
 using System.Security.Claims;
@@ -91,6 +92,17 @@ namespace LoginWeb.Controllers
             if (string.IsNullOrEmpty(email))
                 return Unauthorized(new { message = "Google login failed: No email received." });
 
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+            {
+                // Redirect to registration page with a message
+                HttpContext.Session.SetString("ErrorMessage", "Please create an account first.");
+                return Redirect("/Account/Register");
+            }
+
+            // Sign in the user
+            await _signInManager.SignInAsync(user, isPersistent: false);
+
             // Store user info in session
             HttpContext.Session.SetString("Username", email);
             HttpContext.Session.SetString("isLogin", "true");
@@ -117,6 +129,13 @@ namespace LoginWeb.Controllers
             var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
                 return Unauthorized(new { message = "Microsoft login failed: No email received." });
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+            {
+                // Redirect to registration page with a message
+                HttpContext.Session.SetString("ErrorMessage", "Please create an account first.");
+                return Redirect("/Account/Register");
+            }
             HttpContext.Session.SetString("Username", email);
             HttpContext.Session.SetString("isLogin", "true");
             return Redirect("/Home/Index");

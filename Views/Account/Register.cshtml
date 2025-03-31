@@ -8,6 +8,16 @@
         <div class="col-md-6">
             <h2 class="text-center">Register</h2>
 
+            @if (!string.IsNullOrEmpty(Context.Session.GetString("ErrorMessage")))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @Context.Session.GetString("ErrorMessage")
+                </div>
+                {
+                    Context.Session.Remove("ErrorMessage");
+                }
+            }
+
             <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
 
             <div id="registerForm">
