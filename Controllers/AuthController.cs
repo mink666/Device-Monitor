@@ -10,6 +10,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using System.Text;
 
 namespace LoginWeb.Controllers
 {
@@ -60,13 +61,20 @@ namespace LoginWeb.Controllers
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var result = await _signInManager.PasswordSignInAsync(request.Username, request.Password, false, false);
-
-            if (!result.Succeeded)
+            if (result == Microsoft.AspNetCore.Identity.SignInResult.NotAllowed)
+            {
+                return Unauthorized(new { message = "Please confirm your email before logging in." });
+            }
+            if (result.Succeeded)
+            {
+                HttpContext.Session.SetString("Username", request.Username);
+                HttpContext.Session.SetString("isLogin", "true");
+                return Ok(new { message = "Login successful", redirectUrl = "/Home/Index" });
+            }
+            else
+            {
                 return Unauthorized(new { message = "Invalid username or password." });
-
-            HttpContext.Session.SetString("Username", request.Username);
-            HttpContext.Session.SetString("isLogin", "true");
-            return Ok(new { message = "Login successful", redirectUrl = "/Home/Index" });
+            }
         }
 
         [HttpGet("login-google")] // Redirect to Google login page
@@ -142,20 +150,51 @@ namespace LoginWeb.Controllers
         }
         private string GenerateSecurePassword(int length = 12)
         {
-            const string validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*";
-            byte[] randomBytes = new byte[length];
-            using (var rng = RandomNumberGenerator.Create())
+            const string lowerCaseChars = "abcdefghijklmnopqrstuvwxyz";
+            const string upperCaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const string digitChars = "0123456789";
+            const string nonAlphanumericChars = "!@#$%^&*()_-+=<>?";
+
+            string allValidChars = lowerCaseChars + upperCaseChars + digitChars + nonAlphanumericChars;
+
+            // Use a list to build the password before shuffling
+            List<char> passwordChars = new List<char>(length);
+            RandomNumberGenerator rng = RandomNumberGenerator.Create();
+            byte[] randomBytes = new byte[4]; 
+
+            passwordChars.Add(GetRandomChar(lowerCaseChars, rng, randomBytes));
+            passwordChars.Add(GetRandomChar(upperCaseChars, rng, randomBytes));
+            passwordChars.Add(GetRandomChar(digitChars, rng, randomBytes));
+            passwordChars.Add(GetRandomChar(nonAlphanumericChars, rng, randomBytes));
+
+            int remainingLength = length - passwordChars.Count;
+            for (int i = 0; i < remainingLength; i++)
+            {
+                passwordChars.Add(GetRandomChar(allValidChars, rng, randomBytes));
+            }
+
+            // Fisher-Yates shuffle algorithm using cryptographic RNG
+            for (int i = passwordChars.Count - 1; i > 0; i--)
             {
                 rng.GetBytes(randomBytes);
+                uint randomIndex = BitConverter.ToUInt32(randomBytes, 0) % (uint)(i + 1);
+                int j = (int)randomIndex;
+
+                (passwordChars[i], passwordChars[j]) = (passwordChars[j], passwordChars[i]);
             }
 
-            char[] password = new char[length];
-            for (int i = 0; i < length; i++)
-            {
-                password[i] = validChars[randomBytes[i] % validChars.Length];
-            }
+            rng.Dispose();
 
-            return new string(password);
+            return new string(passwordChars.ToArray());
+        }
+
+        // Helper function to get a single random char from a given string using RNG
+        private char GetRandomChar(string characterSet, RandomNumberGenerator rng, byte[] buffer)
+        {
+            rng.GetBytes(buffer);
+                                 
+            uint randomIndex = BitConverter.ToUInt32(buffer, 0) % (uint)characterSet.Length;
+            return characterSet[(int)randomIndex];
         }
     }
 

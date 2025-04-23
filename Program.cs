@@ -46,11 +46,12 @@ if (builder.Environment.IsDevelopment())
 // Configure Identity with Cookie Authentication
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
-    options.Password.RequireDigit = false;            // No number required
-    options.Password.RequiredLength = 3;              // Minimum length 3
-    options.Password.RequireNonAlphanumeric = false;  // No special characters required
-    options.Password.RequireUppercase = false;        // No uppercase required
-    options.Password.RequireLowercase = false;        // No lowercase required
+    options.SignIn.RequireConfirmedAccount = true; 
+    options.Password.RequireDigit = true;            
+    options.Password.RequiredLength = 12;            
+    options.Password.RequireNonAlphanumeric = true;  
+    options.Password.RequireUppercase = true;       
+    options.Password.RequireLowercase = true;       
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();

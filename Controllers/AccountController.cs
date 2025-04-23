@@ -61,5 +61,6 @@ namespace LoginWeb.Controllers
             }
             return View("ConfirmEmail", model);
         }
+
     }
 }
