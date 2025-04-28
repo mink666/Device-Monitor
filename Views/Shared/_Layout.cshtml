@@ -1,8 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Http
 @inject IHttpContextAccessor HttpContextAccessor
-@using Microsoft.AspNetCore.Identity
-@inject SignInManager<IdentityUser> SignInManager
-@inject UserManager<IdentityUser> UserManager
 
 <!DOCTYPE html>
 <html lang="en">
@@ -34,6 +31,12 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                             </li>
+                            @if (HttpContextAccessor.HttpContext?.Session.GetString("isAdmin") == "true")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">Users</a>
+                                </li>
+                            }
                         }
                     </ul>
 
@@ -55,7 +58,10 @@
                                 <span class="nav-link text-dark">Welcome, @HttpContextAccessor.HttpContext.Session.GetString("Username")</span>
                             </li>
                             <li class="nav-item">
-                                <a href="/Account/Logout" class="btn btn-danger" style="color:white">Logout</a>
+                                <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger me-2">Logout</button>
+                                </form>
                             </li>
                         }
                     </ul>

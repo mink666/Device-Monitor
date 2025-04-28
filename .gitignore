@@ -18,10 +18,6 @@ obj/
 # Log files
 *.log
 
-# Configuration files
-appsettings.json
-appsettings.Development.json
-
 # Rider project files
 .idea/
 *.sln.iml

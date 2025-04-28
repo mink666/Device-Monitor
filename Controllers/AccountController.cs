@@ -1,66 +1,85 @@
-﻿using LoginWeb.Data;
+﻿using LoginWeb.Data; 
 using LoginWeb.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
+using Microsoft.EntityFrameworkCore;
+
 
 namespace LoginWeb.Controllers
 {
-        public class AccountController : Controller
-        {
-            private readonly AppDbContext _context;
-            private readonly UserManager<IdentityUser> _userManager;
+    public class AccountController : Controller
+    {
 
-        public AccountController(AppDbContext context, UserManager<IdentityUser> userManager)
-            {
-                _context = context;
-                _userManager = userManager;
+        private readonly AppDbContext _context;
+
+        public AccountController(AppDbContext context)
+        {
+            _context = context;
         }
 
+        // GET: /Account/Login
+        [HttpGet] 
         public IActionResult Login()
         {
             return View();
         }
+
+        // GET: /Account/Register
+        [HttpGet] 
         public IActionResult Register()
-            {
-                return View();
-            }
-            public IActionResult Logout()
-            {
-            HttpContext.Session.Remove("isLogin");
-            return RedirectToAction("Login"); 
-            }
-        [HttpGet]
-        public async Task<IActionResult> ConfirmEmail(string userId, string token)
         {
-            var model = new ConfirmEmailViewModel();
+            return View();
+        }
 
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+        [HttpPost] 
+        [ValidateAntiForgeryToken] 
+        public IActionResult Logout()
+        {
+            // Clear relevant session variables
+            HttpContext.Session.Remove("isLogin");
+            HttpContext.Session.Remove("Username");
+            HttpContext.Session.Remove("isAdmin"); 
+
+            return RedirectToAction("Login", "Account"); 
+        }
+        [HttpGet]
+        public async Task<IActionResult> ConfirmEmail(int userId) 
+        {
+            var model = new ConfirmEmailViewModel(); 
+
+            if (userId <= 0)
             {
-                model.Message = "Invalid confirmation link.";
-                return View("ConfirmEmail", model);
+                model.Message = "Invalid user ID provided."; 
+                return View("ConfirmEmail", model); 
             }
 
-            var user = await _userManager.FindByIdAsync(userId);
+            // Find the user by primary key
+            var user = await _context.Users.FindAsync(userId);
+
             if (user == null)
             {
                 model.Message = "User not found.";
+                return View("ConfirmEmail", model); 
+            }
+
+            if (user.EmailConfirmed)
+            {
+                model.Message = "Your email address has already been confirmed."; 
                 return View("ConfirmEmail", model);
             }
-            string decodedToken = WebUtility.UrlDecode(token);
 
-            var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
-            if (!result.Succeeded)
+            user.EmailConfirmed = true;
+
+            try
             {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                model.Message = $"Email confirmation failed: {errors}";
+                // Save the changes to the database
+                await _context.SaveChangesAsync();
+                model.Message = "Email confirmed successfully. You can now log in.";
             }
-            else
+            catch (DbUpdateException ex)
             {
-                model.Message = "Email confirmed successfully.";
+                model.Message = "An error occurred while confirming your email. Please try again later."; 
             }
-            return View("ConfirmEmail", model);
+            return View("ConfirmEmail", model); 
         }
-
     }
 }
