@@ -1,0 +1,94 @@
+﻿@model List<LoginWeb.Models.User>
+
+@{
+    ViewData["Title"] = "User Management";
+    var successMessage = TempData["AdminMessageSuccess"] as string;
+    var errorMessage = TempData["AdminMessageError"] as string;
+    // var currentAdminUsername = HttpContextAccessor.HttpContext?.Session.GetString("Username");
+}
+
+<h1>@ViewData["Title"]</h1>
+<p>Manage application users.</p>
+<hr />
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @Html.Raw(successMessage) 
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @Html.Raw(errorMessage)
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+
+@* Check if the Model (list of users) is null or empty *@
+@if (Model == null || !Model.Any())
+{
+    <p>No users found in the system.</p>
+}
+else
+{
+    @* Display users in a table *@
+    <table class="table table-striped table-hover table-sm">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Status</th> @* Simplified columns based on your snippet *@
+                <th style="width: 25%;">Actions</th> @* Adjusted width slightly *@
+            </tr>
+        </thead>
+        <tbody>
+            @* Loop through each user in the Model *@
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td>@Html.DisplayFor(modelItem => user.Username)</td>
+                    <td>@Html.DisplayFor(modelItem => user.Email)</td>
+                    <td>
+                        @* Display status using badges *@
+                        @if (user.AccountStatus)
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Deactivated</span>
+                        }
+                    </td>
+                    <td>
+                        @* Edit Button/Link - Points to Admin/Edit action *@
+                        <a asp-controller="Admin" asp-action="Edit" asp-route-id="@user.Id" class="btn btn-primary btn-sm">Edit</a>
+
+                        @* Form for Toggling Account Status *@
+                        @* Optional: Add check here if you want to prevent self-deactivation *@
+                        @* @if (user.Username != currentAdminUsername) { *@
+                        <form asp-controller="Admin" asp-action="ToggleAccountStatus" asp-route-id="@user.Id" method="post" style="display:inline; margin-left: 5px;">
+                            @Html.AntiForgeryToken() @* Security token *@
+
+                            @if (user.AccountStatus)
+                            {
+                                <button type="submit" class="btn btn-warning btn-sm" title="Deactivate User Account">Deactivate</button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-success btn-sm" title="Activate User Account">Activate</button>
+                            }
+                        </form>
+                        @* } else { <span class="text-muted ms-2">(Current Admin)</span> } *@
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@* Include Bootstrap JS if needed and not in _Layout.cshtml *@
+@* <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script> *@
+

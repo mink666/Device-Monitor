@@ -25,13 +25,7 @@ public class HomeController : Controller
         }
         var devices = _context.Devices.ToList();
         return View(devices);
-    }
-
-    public IActionResult Logout()
-    {
-        HttpContext.Session.Remove("isLogin");
-        return RedirectToAction("Login");
-    }
+    }   
     public IActionResult Privacy()
     {
         return View();

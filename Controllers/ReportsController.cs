@@ -14,15 +14,14 @@ public class ReportsController : Controller
         _context = context;
     }
 
-    [Authorize] //ASP.NET Core Authorization
     [HttpPost]
     public IActionResult Generate(string title)
     {
         // Check if the user is logged in using session
-        //if (HttpContext.Session.GetString("isLogin") == null)
-            //{
-            //    return Unauthorized("You must be logged in to access reports.");
-            //}
+        if (HttpContext.Session.GetString("isLogin") == null)
+        {
+            return Unauthorized("You must be logged in to access reports.");
+        }
 
         List<Device> devices = _context.Devices.ToList();
 
