@@ -138,14 +138,13 @@ namespace LoginWeb.Controllers
                 _logger.LogWarning($"Login failed for user '{user.Username}': Account is deactivated.");
                 return Unauthorized(new { message = "Your account has been deactivated. Please contact an administrator." });
             }
-            // 4. Hash the incoming password using MD5 (INSECURE!)
+            // 4. Hash the incoming password using MD5
             string enteredPasswordHash = ComputeMd5Hash(request.Password);
 
             // 5. Compare the generated hash with the stored hash
             if (string.IsNullOrEmpty(user.PasswordHash) || user.PasswordHash != enteredPasswordHash)
             {
                 _logger.LogWarning($"Login failed for user '{user.Username}': Password hash mismatch.");
-                // _logger.LogDebug($"Stored Hash: {user.PasswordHash}, Entered Hash: {enteredPasswordHash}");
                 return Unauthorized(new { message = "Invalid username or password." }); // Generic error
             }
 
