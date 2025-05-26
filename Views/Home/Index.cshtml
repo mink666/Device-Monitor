@@ -1,10 +1,8 @@
 ﻿@{
     ViewData["Title"] = "Home";
 }
-@model IEnumerable<LoginWeb.Models.Device>
+@model IEnumerable<LoginWeb.ViewModels.DeviceDisplayViewModel>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Welcome, @Context.Session.GetString("Username")!</h2>
@@ -27,34 +25,33 @@
                 <form id="addDeviceForm">
                     <div class="mb-3">
                         <label for="deviceName" class="form-label">Device Name</label>
-                        <input type="text" class="form-control" id="deviceName" name="Name" required>
+                        <input type="text" class="form-control" id="deviceName" name="Name" placeholder="Enter device name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="deviceIP" class="form-label">Device IP Address</label>
-                        <input type="text" class="form-control" id="deviceIP" name="IPAddress" required>
+                        <label for="deviceIP" class="form-label">IP Address</label>
+                        <input type="text" class="form-control" id="deviceIP" name="IPAddress" placeholder="Enter IP Address" required>
                     </div>
                     <div class="mb-3">
                         <label for="devicePort" class="form-label">Port</label>
-                        <input type="number" class="form-control" id="devicePort" name="Port">
+                        <input type="number" class="form-control" id="devicePort" name="Port" value="161">
                     </div>
                     <div class="mb-3">
-                        <label for="deviceUsername" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="deviceUsername" name="Username">
+                        <label for="deviceCommunityString" class="form-label">Community</label>
+                        <input type="text" class="form-control" id="deviceCommunityString" name="CommunityString" placeholder="Enter community string" required>
                     </div>
                     <div class="mb-3">
-                        <label for="devicePassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="devicePassword" name="Password">
+                        <label for="devicePollingInterval" class="form-label">Polling Interval (seconds)</label>
+                        <input type="text" class="form-control" id="devicePollingInterval" name="PollingIntervalSeconds" value="60">
                     </div>
                     <div class="mb-3">
-                        <label for="deviceStatus" class="form-label">Status</label>
-                        <select id="deviceStatus" class="form-select" name="Status">
-                            <option value="Running">Running</option>
-                            <option value="Stopped">Stopped</option>
+                        <label for="deviceIsEnabled" class="form-label">Monitoring</label>
+                        <select class="form-select" id="deviceIsEnabled" name="IsEnabled">
+                            <option value="true" selected>Enabled</option>
+                            <option value="false">Disabled</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary">Add Device</button>
                 </form>
-
             </div>
         </div>
     </div>
@@ -69,21 +66,53 @@
             <th>ID</th>
             <th>Name</th>
             <th>IP Address</th>
-            <th>Status</th>
+            <th>Port</th>
+            <th>Monitoring</th>
+            <th>Polling Status</th>
+            <th>Last Check</th>
+            <th>CPU & OS Version</th>
+            <th>Uptime (Raw Sec)</th>
         </tr>
     </thead>
     <tbody id="deviceList">
         @foreach (var device in Model)
         {
-            <tr data-id="@device.Id" data-name="@device.Name" data-ip="@device.IPAddress" data-status="@device.Status" oncontextmenu="return showContextMenu(event, this);">
+            <tr data-id="@device.Id"
+                data-name="@device.Name"
+                data-ip="@device.IPAddress"
+                data-port="@device.Port"
+                data-community="@device.CommunityString"
+                data-isenabled="@device.IsEnabled.ToString().ToLower()"
+                data-pollinginterval="@device.PollingIntervalSeconds"
+                data-status="@device.LastStatus"
+                data-lastcheck="@device.LastCheckTimestamp"
+                data-osversion="@device.OSVersion"
+                data-sysuptime="@device.LatestSysUpTimeSeconds"
+                oncontextmenu="return showContextMenu(e, this);">
                 <td>@device.Id</td>
                 <td>@device.Name</td>
                 <td>@device.IPAddress</td>
-                <td>@device.Status</td>
+                <td>@device.Port</td>
+                <td>@(device.IsEnabled ? "Enabled" : "Disabled")</td>
+                <td>@device.LastStatus</td>
+                <td>@device.LastCheckTimestamp?.ToString("g")</td>
+                <td>@device.OSVersion</td>
+                <td>@FormatUptime(@device.LatestSysUpTimeSeconds)</td>
             </tr>
         }
     </tbody>
 </table>
+
+@functions {
+    public string FormatUptime(long? totalSeconds)
+    {
+        if (!totalSeconds.HasValue || totalSeconds.Value < 0) return "N/A";
+        if (totalSeconds.Value == 0) return "<1m";
+        var ts = TimeSpan.FromSeconds(totalSeconds.Value);
+        return $"{ts.Days}d {ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
+    }
+}
+
 
 <!-- Edit Device Modal-->
 <div class="modal fade" id="editDeviceModal" tabindex="-1" aria-labelledby="editDeviceModalLabel" aria-hidden="true">
@@ -96,27 +125,38 @@
             <div class="modal-body">
                 <form id="editDeviceForm">
                     <input type="hidden" id="editDeviceId" name="Id" />
-
                     <div class="mb-3">
                         <label for="editDeviceName" class="form-label">Device Name</label>
                         <input type="text" class="form-control" id="editDeviceName" name="Name" placeholder="Enter device name" required />
                         <span class="text-danger" id="editDeviceNameValidation"></span>
                     </div>
-
                     <div class="mb-3">
-                        <label for="editDeviceIP" class="form-label">Device IP Address</label>
+                        <label for="editDeviceIP" class="form-label">IP Address</label>
                         <input type="text" class="form-control" id="editDeviceIP" name="IPAddress" placeholder="Enter device IP address" required />
                         <span class="text-danger" id="editDeviceIPValidation"></span>
                     </div>
                     <div class="mb-3">
-                        <label for="editDeviceStatus" class="form-label">Status</label>
-                        <select class="form-select" id="editDeviceStatus" name="Status">
-                            <option value="Running">Running</option>
-                            <option value="Stopped">Stopped</option>
-                        </select>
-                        <span class="text-danger" id="editDeviceStatusValidation"></span>
+                        <label for="editDevicePort" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="editDevicePort" name="Port" placeholder="Enter device port" required />
+                        <span class="text-danger" id="editDevicePortValidation"></span>
                     </div>
-
+                    <div class="mb-3">
+                        <label for="editDeviceCommunity" class="form-label">Community</label>
+                        <input type="text" class="form-control" id="editDeviceCommunity" name="CommunityString" placeholder="Enter device community string" required />
+                        <span class="text-danger" id="editDeviceCommunityValidation"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDeviceIsEnabled" class="form-label">Monitoring</label>
+                        <select class="form-select" id="editDeviceIsEnabled" name="IsEnabled">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDevicePollingInterval" class="form-label">Polling Interval(seconds)</label>
+                        <input type="number" class="form-control" id="editDevicePollingInterval" name="PollingIntervalSeconds" placeholder="Enter polling interval" required />
+                        <span class="text-danger" id="editDevicePollingIntervalValidation"></span>
+                    </div>
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -140,5 +180,4 @@
         <button type="submit" class="btn btn-primary">Download Report</button>
     </div>
 </form>
-
 <script src="~/js/device.js"></script>
