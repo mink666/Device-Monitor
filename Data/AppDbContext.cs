@@ -9,18 +9,11 @@ namespace LoginWeb.Data
 
         public DbSet<User> Users { get; set; }
 
-        public DbSet<Device> Devices { get; set; } 
+        public DbSet<Device> Devices { get; set; }
+        public DbSet<DeviceHistory> DeviceHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Device>()
-                .Property(d => d.CPUUsage)
-                .HasColumnType("decimal(18,2)");
-
-            modelBuilder.Entity<Device>()
-                .Property(d => d.MemoryUsage)
-                .HasColumnType("decimal(18,2)");
-
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Username)
                 .IsUnique();
@@ -28,6 +21,11 @@ namespace LoginWeb.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+            modelBuilder.Entity<Device>()
+                .HasMany(d => d.Histories)
+                .WithOne(h => h.Device)
+                .HasForeignKey(h => h.DeviceId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

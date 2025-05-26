@@ -1,0 +1,16 @@
+﻿@{
+    ViewData["Title"] = "Simple SNMP Test";
+    string message = ViewData["ResultMessage"] as string ?? "No result message found.";
+}
+
+<h1>Simple SNMP Test</h1>
+
+<h2>Result:</h2>
+<p>
+    <pre>@message</pre> @* Using <pre> preserves formatting and line breaks *@
+</p>
+
+<hr />
+<p>
+    <a asp-action="GetData" asp-controller="SnmpTest">Run Test Again</a>
+</p>

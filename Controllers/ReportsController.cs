@@ -29,7 +29,7 @@ public class ReportsController : Controller
         {
             return BadRequest("No devices available.");
         }
-        byte[] pdfBytes = PdfReportService.GenerateDeviceReport(title, devices);
+        byte[] pdfBytes = PdfReportService.GenerateDeviceReport(title, devices, _context);
         return File(pdfBytes, "application/pdf", $"{title}.pdf");
     }
 }

@@ -1,201 +1,243 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore; // Needed for ToListAsync, FindAsync etc.
 using System.Linq;
 using LoginWeb.Models;
 using LoginWeb.Data;
-using System.Security.Cryptography;
-using System.Text;
-using System;
-using System.IO;
-using Org.BouncyCastle.Crypto.Digests;
-
+//using System.Security.Cryptography; // No longer needed here if EncryptionService is removed
+//using System.Text; // No longer needed here
+//using System; // Already implicitly available or via other usings
+//using System.IO; // No longer needed if using [FromBody]
+//using Org.BouncyCastle.Crypto.Digests; // No longer needed here
+using System.Threading.Tasks; // Needed for async/await
+using Microsoft.Extensions.Logging;
+using System.ComponentModel.DataAnnotations; // For ILogger
+using LoginWeb.DTOs;
 
 namespace LoginWeb.Controllers
 {
     [ApiController]
-    [Route("Device")]
-    public class DeviceController : Controller
+    [Route("api/[controller]")] // Common API routing convention
+    public class DeviceController : ControllerBase 
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<DeviceController> _logger; 
 
-        public DeviceController(AppDbContext context)
+        public DeviceController(AppDbContext context, ILogger<DeviceController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
-        // POST: /Device/Create
-        [HttpPost("Create")]
-        public async Task<IActionResult> Create()
+        // GET: api/Device
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<object>>> GetDevices()
         {
             try
             {
-                using var reader = new StreamReader(Request.Body);
-                string body = await reader.ReadToEndAsync();  
+                var devicesFromDb = await _context.Devices
+                    .Include(d => d.Histories.OrderByDescending(h => h.Timestamp).Take(1)) // Eager load latest history
+                    .ToListAsync();
 
-                var dto = Newtonsoft.Json.JsonConvert.DeserializeObject<RegisterDeviceDto>(body);
-                if (dto == null)
-                    return BadRequest(new { success = false, message = "Invalid JSON format." });
-
-
-                // 🔹 Validate required fields
-                if (string.IsNullOrEmpty(dto.Name) || string.IsNullOrEmpty(dto.Username) ||
-                    string.IsNullOrEmpty(dto.PlaintextPassword) || string.IsNullOrEmpty(dto.IPAddress) ||
-                    dto.Port == null || string.IsNullOrEmpty(dto.Status))
+                var devicesData = devicesFromDb.Select(d =>
                 {
-                    return BadRequest(new { success = false, message = "All fields are required." });
+                    DateTime? lastCheckTimestampUtc = null;
+                    if (d.LastCheckTimestamp.HasValue)
+                    {
+                        // Crucially ensure the Kind is Utc IF it was stored as Utc
+                        // If EF Core already retrieved it as Unspecified, specify it as Utc
+                        // because you KNOW you stored it as DateTime.UtcNow
+                        lastCheckTimestampUtc = DateTime.SpecifyKind(d.LastCheckTimestamp.Value, DateTimeKind.Utc);
+                    }
+
+                    return new
+                    {
+                        d.Id,
+                        d.Name,
+                        IpAddress = d.IPAddress,
+                        d.Port,
+                        d.IsEnabled,
+                        d.LastStatus,
+                        LastCheckTimestamp = lastCheckTimestampUtc, // Use the kind-specified version
+                        d.OSVersion,
+                        d.CommunityString,
+                        d.PollingIntervalSeconds,
+                        LatestSysUpTimeSeconds = d.Histories.FirstOrDefault()?.SysUpTimeSeconds,
+                        LatestRawSystemDescription = d.Histories.FirstOrDefault()?.RawSystemDescription
+                    };
+                }).ToList();
+
+
+                // Your logging snippet (now LastCheckTimestamp in firstDeviceForLog should have Kind = Utc)
+                if (devicesData.Any())
+                {
+                    var firstDeviceForLog = devicesData.First();
+                    var timestampPropertyInfo = firstDeviceForLog.GetType().GetProperty("LastCheckTimestamp");
+                    if (timestampPropertyInfo != null)
+                    {
+                        var timestampValue = timestampPropertyInfo.GetValue(firstDeviceForLog) as DateTime?;
+                        if (timestampValue.HasValue)
+                        {
+                            _logger.LogInformation("CONTROLLER - Sending Device '{DeviceName}', LastCheckTimestamp: {TimestampValueString}, Kind: {TimestampKind}",
+                                firstDeviceForLog.GetType().GetProperty("Name")?.GetValue(firstDeviceForLog),
+                                timestampValue.Value.ToString("o"),
+                                timestampValue.Value.Kind);
+                        }
+                    }
                 }
-
-                // 🔹 Validate IP Address
-                //if (!System.Net.IPAddress.TryParse(dto.IPAddress, out _))
-                //{
-                //    return BadRequest(new { success = false, message = "Invalid IP Address format." });
-                //}
-
-                // 🔹 Encrypt Password
-                byte[] aesKey = EncryptionService.GenerateAESKey(dto.Username);
-                var (IV, encryptedPassword) = EncryptionService.Encrypt(dto.PlaintextPassword, aesKey);
-
-                // 🔹 Save to Database
-                var newDevice = new Device
-                {
-                    Name = dto.Name,
-                    Username = dto.Username,
-                    IV = IV,
-                    Password = encryptedPassword,
-                    IPAddress = dto.IPAddress,
-                    Port = dto.Port,
-                    Status = dto.Status,
-
-                    // Default values for extra fields
-                    DeviceType = "Unknown",
-                    CPUUsage = 0,
-                    MemoryUsage = 0,
-                    LastUpdated = DateTime.UtcNow,
-                    BatteryLevel = 100,
-                    OSVersion = "Unknown"
-                };
-
-                _context.Devices.Add(newDevice);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { success = true, message = "Device Registered Successfully", deviceId = newDevice.Id });
+                return Ok(devicesData);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] {ex}");
-                Console.WriteLine($"[INNER EXCEPTION] {ex.InnerException?.Message}");
-
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Internal Server Error",
-                    error = ex.InnerException?.Message ?? ex.Message
-                });
+                _logger.LogError(ex, "Error occurred while fetching devices with latest polled data.");
+                return StatusCode(500, new { success = false, message = "Internal Server Error fetching devices." });
             }
-
         }
 
-        // POST: /Device/Edit/{id}
-        [HttpPost ("Edit/{id}")]
-        public IActionResult Edit(int id, [FromBody] DeviceUpdateModel updatedDevice)
+        // GET: api/Device/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Device>> GetDevice(int id)
         {
-            if (ModelState.IsValid)
-            {
-                var device = _context.Devices.Find(id);
-                if (device == null)
-                {
-                    return NotFound();
-                }
-                device.Name = updatedDevice.Name;
-                device.IPAddress = updatedDevice.IPAddress;
-                device.Status = updatedDevice.Status;
+            var device = await _context.Devices
+                                     // .Include(d => d.Histories) // Optionally include history
+                                     .FirstOrDefaultAsync(d => d.Id == id);
 
-                _context.Devices.Update(device);
-                _context.SaveChanges();
-                var devices = _context.Devices.ToList();
-                return Json(new { success = true, devices = devices });
-            }
-            return Json(new { success = false, errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)) });
-        }
-        [HttpPost ("Delete/{id}")]
-        public IActionResult Delete(int id)
-        {
-            var device = _context.Devices.Find(id);
             if (device == null)
             {
                 return NotFound();
             }
 
-            _context.Devices.Remove(device);
-            _context.SaveChanges();
-            var devices = _context.Devices.ToList();
-            return Json(new { success = true, devices = devices });
+            return device; // Consider a DeviceDetailDto to control returned data
         }
 
-        public class EncryptionService
+
+        // POST: api/Device
+        [HttpPost]
+        // [Authorize(Roles="Admin,User")] // Or just [Authorize]
+        public async Task<ActionResult<Device>> CreateDevice([FromBody] DeviceCreateDto dto)
         {
-            private static string ComputeMD4(string input)
-            {
-                MD4Digest md4 = new MD4Digest();
-                byte[] inputBytes = Encoding.UTF8.GetBytes(input);
-                md4.BlockUpdate(inputBytes, 0, inputBytes.Length);
-                byte[] hashBytes = new byte[md4.GetDigestSize()];
-                md4.DoFinal(hashBytes, 0);
-                return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-            }
+            // Input validation is handled by [ApiController] and DTO attributes
+            // You might add custom validation, e.g., check if IPAddress is unique if needed
 
-            public static byte[] GenerateAESKey(string username)
+            try
             {
-                string md4Hash = ComputeMD4(username);
-                using (SHA256 sha256 = SHA256.Create())
+                var newDevice = new Device
                 {
-                    return sha256.ComputeHash(Encoding.UTF8.GetBytes(md4Hash)); 
-                }
+                    Name = dto.Name,
+                    IPAddress = dto.IpAddress, 
+                    Port = dto.Port,
+                    CommunityString = dto.CommunityString, 
+                    IsEnabled = dto.IsEnabled,
+                    PollingIntervalSeconds = dto.PollingIntervalSeconds,
+                    OSVersion = dto.OSVersion,
+
+                    // --- Default values ---
+                    SnmpVersion = SnmpVersionOption.V2c, 
+                    LastStatus = "Unknown", 
+                    LastCheckTimestamp = null, 
+                    LastErrorTimestamp = null,
+                    LastErrorMessage = null
+
+                    
+                };
+                _context.Devices.Add(newDevice);
+                await _context.SaveChangesAsync();
+
+                // Return 201 Created with location header and the created device
+                return CreatedAtAction(nameof(GetDevice), new { id = newDevice.Id }, newDevice);
             }
-            public static (string IV, string EncryptedData) Encrypt(string plaintext, byte[] key)
+            catch (Exception ex)
             {
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Key = key;
-                    aes.GenerateIV();
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
-
-                    using (ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV))
-                    {
-                        byte[] plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
-                        byte[] encryptedBytes = encryptor.TransformFinalBlock(plaintextBytes, 0, plaintextBytes.Length);
-
-                        return (Convert.ToBase64String(aes.IV), Convert.ToBase64String(encryptedBytes));
-                    }
-                }
-            }
-            public static string Decrypt(string encryptedData, string iv, byte[] key)
-            {
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Key = key;
-                    aes.IV = Convert.FromBase64String(iv); 
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
-
-                    byte[] encryptedBytes = Convert.FromBase64String(encryptedData);
-
-                    using (ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV))
-                    {
-                        byte[] decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
-                        return Encoding.UTF8.GetString(decryptedBytes);
-                    }
-                }
+                _logger.LogError(ex, "Error occurred while creating device."); // Use ILogger
+                // Consider more specific error handling (e.g., DbUpdateException for uniqueness)
+                return StatusCode(500, new { success = false, message = "Internal Server Error creating device." });
             }
         }
-    }
-    public class RegisterDeviceDto
-    {
-        public string Name { get; set; }
-        public string Username { get; set; }
-        public string PlaintextPassword { get; set; }
-        public string IPAddress { get; set; }
-        public int? Port { get; set; }
-        public string Status { get; set; }
+
+        // PUT: api/Device/5
+        [HttpPut("{id}")] // Use HttpPut for replacing/updating resource
+        // [Authorize(Roles="Admin,User")] // Or just [Authorize]
+        public async Task<IActionResult> EditDevice(int id, [FromBody] DeviceEditDto dto)
+        {
+            var device = await _context.Devices.FindAsync(id);
+
+            if (device == null)
+            {
+                _logger.LogWarning("EditDevice requested for non-existent Id: {DeviceId}", id);
+                return NotFound(new { success = false, message = "Device not found." });
+            }
+
+            // --- Update properties from DTO ---
+            device.Name = dto.Name;
+            device.IPAddress = dto.IPAddress; 
+            device.Port = dto.Port;
+            device.CommunityString = dto.CommunityString; 
+            device.IsEnabled = dto.IsEnabled;
+            device.PollingIntervalSeconds = dto.PollingIntervalSeconds;
+            device.OSVersion = dto.OSVersion;
+
+            _context.Entry(device).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Device updated successfully: {DeviceId}", id);
+                return NoContent(); // Standard successful PUT response
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogError(ex, "Concurrency error occurred while editing device Id: {DeviceId}", id);
+                // Handle concurrency conflict if necessary
+                return Conflict(new { success = false, message = "Concurrency error updating device." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while editing device Id: {DeviceId}", id);
+                return StatusCode(500, new { success = false, message = "Internal Server Error updating device." });
+            }
+        }
+
+        // DELETE: api/Device/5
+        [HttpDelete("{id}")]
+        // [Authorize(Roles="Admin,User")] // Or just [Authorize]
+        public async Task<IActionResult> DeleteDevice(int id)
+        {
+            var device = await _context.Devices.FindAsync(id);
+            if (device == null)
+            {
+                _logger.LogWarning("DeleteDevice requested for non-existent Id: {DeviceId}", id);
+                return NotFound(new { success = false, message = "Device not found." });
+            }
+
+            // --- Consider related DeviceHistory records ---
+            // By default, if your FK relationship isn't set to Cascade Delete,
+            // history records will NOT be deleted, which might be desired.
+            // If you WANT to delete history: configure Cascade Delete in OnModelCreating
+            // or query and remove history records manually here (less efficient).
+            // Example:
+            // var history = await _context.DeviceHistories.Where(h => h.DeviceId == id).ToListAsync();
+            // _context.DeviceHistories.RemoveRange(history);
+
+            _context.Devices.Remove(device);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Device deleted successfully: {DeviceId}", id);
+                return NoContent(); // Standard successful DELETE response
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting device Id: {DeviceId}", id);
+                return StatusCode(500, new { success = false, message = "Internal Server Error deleting device." });
+            }
+        }
+
+
+        // --- REMOVED EncryptionService ---
+        // The EncryptionService inner class is removed as it's no longer needed
+        // for the SNMPv2c CommunityString approach. If you implement encryption
+        // at rest for CommunityString later, use ASP.NET Core Data Protection
+        // or a similar standard mechanism, likely injected as a service.
+
     }
 }

@@ -76,6 +76,7 @@ builder.Services.AddAuthentication(options =>
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
+builder.Services.AddHostedService<SnmpPollingService>();
 // Add services to the container.
 var app = builder.Build();
 

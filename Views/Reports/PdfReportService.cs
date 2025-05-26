@@ -3,10 +3,17 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System;
 using System.Collections.Generic;
-using LoginWeb.Models; 
+using LoginWeb.Models;
+using LoginWeb.Data;
+using System.Linq;
 public class PdfReportService
 {
-    public static byte[] GenerateDeviceReport(string title,List<Device> devices)
+    private readonly AppDbContext _context;
+    public PdfReportService(AppDbContext context)
+    {
+        _context = context;
+    }
+    public static byte[] GenerateDeviceReport(string title,List<Device> devices, AppDbContext context)
     {
         try
         {
@@ -57,13 +64,23 @@ public class PdfReportService
                             // ✅ Add Device Data Rows
                             foreach (var device in devices)
                             {
+                                DeviceHistory? latestHistory = null;
+                                if (context != null && context.DeviceHistories != null)
+                                {
+                                    latestHistory = context.DeviceHistories
+                                                        .Where(h => h.DeviceId == device.Id)
+                                                        .OrderByDescending(h => h.Timestamp)
+                                                        .FirstOrDefault();
+                                }
+
                                 table.Cell().Padding(5).Text(device.Id.ToString());
                                 table.Cell().Padding(5).Text(device.Name);
                                 table.Cell().Padding(5).Text(device.IPAddress);
-                                table.Cell().Padding(5).Text(device.Status);
-                                table.Cell().Padding(5).Text(device.CPUUsage.HasValue ? $"{device.CPUUsage}%" : "N/A");
-                                table.Cell().Padding(5).Text(device.MemoryUsage.HasValue ? $"{device.MemoryUsage} MB" : "N/A");
-                                table.Cell().Padding(5).Text(device.LastUpdated?.ToString("yyyy-MM-dd HH:mm") ?? "N/A");
+                                table.Cell().Padding(5).Text(device.LastStatus ?? "Unknown");
+                                table.Cell().Padding(5).Text(latestHistory?.CpuLoadPercentage.HasValue == true ? $"{latestHistory.CpuLoadPercentage}%" : "N/A");
+                                table.Cell().Padding(5).Text(latestHistory?.MemoryUsagePercentage.HasValue == true ? $"{latestHistory.MemoryUsagePercentage}%" : "N/A");
+                                string metricsTimestamp = latestHistory?.Timestamp.ToString("yyyy-MM-dd HH:mm") ?? "N/A";
+                                table.Cell().Padding(5).Text(metricsTimestamp);
                             }
                         });
 
