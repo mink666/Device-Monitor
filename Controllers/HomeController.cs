@@ -27,12 +27,12 @@ public class HomeController : Controller
         try
         {
             var devicesForView = await _context.Devices
-                .Select(d => new DeviceDisplayViewModel // Project into your new ViewModel
+                .Select(d => new DeviceDisplayViewModel
                 {
                     // Assign properties from Device entity
                     Id = d.Id,
                     Name = d.Name,
-                    IPAddress = d.IPAddress, // Use actual C# property name
+                    IPAddress = d.IPAddress, 
                     Port = d.Port,
                     IsEnabled = d.IsEnabled,
                     LastStatus = d.LastStatus,

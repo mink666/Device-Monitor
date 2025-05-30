@@ -1,20 +1,17 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection; // Required for IServiceScopeFactory
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using LoginWeb.Data; // Your AppDbContext
-using LoginWeb.Models; // Your Device, DeviceHistory models
+using LoginWeb.Data; 
+using LoginWeb.Models; 
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Messaging; // For VersionCode, TimeoutException
+using Lextm.SharpSnmpLib.Messaging; 
 using System.Net;
 using System.Collections.Generic;
-using System.Linq; // For .Where, .ToList, etc.
-using Microsoft.EntityFrameworkCore; // For ToListAsync
-
-// It's good practice to put services in a namespace
-// namespace LoginWeb.Services { // For example
+using System.Linq; 
+using Microsoft.EntityFrameworkCore; 
 
 public class SnmpPollingService : IHostedService, IDisposable
 {
@@ -22,11 +19,19 @@ public class SnmpPollingService : IHostedService, IDisposable
     private readonly IServiceScopeFactory _scopeFactory;
     private Timer _timer;
     private readonly TimeSpan _defaultPollingIntervalSeconds = TimeSpan.FromSeconds(15);
-     
-    // Define your OIDs here
+
+
     private static readonly ObjectIdentifier SysUpTimeOid = new ObjectIdentifier("1.3.6.1.2.1.1.3.0");
     private static readonly ObjectIdentifier SysDescrOid = new ObjectIdentifier("1.3.6.1.2.1.1.1.0");
-    private static readonly ObjectIdentifier TotalRamOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.2.0"); // hrMemorySize
+    private static readonly ObjectIdentifier CpuLoadOid = new ObjectIdentifier("1.3.6.1.2.1.25.3.3.1.2.3");
+
+    private static readonly ObjectIdentifier RamAllocUnitsOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.4.4");
+    private static readonly ObjectIdentifier RamTotalSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.5.4");
+    private static readonly ObjectIdentifier RamUsedSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.6.4");
+
+    private static readonly ObjectIdentifier DiskCAllocUnitsOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.4.1");
+    private static readonly ObjectIdentifier DiskCTotalSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.5.1");
+    private static readonly ObjectIdentifier DiskCUsedSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.6.1");
 
     public SnmpPollingService(ILogger<SnmpPollingService> logger, IServiceScopeFactory scopeFactory)
     {
@@ -48,9 +53,8 @@ public class SnmpPollingService : IHostedService, IDisposable
         using (var scope = _scopeFactory.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            // Using the class-level _logger. Can resolve a scoped one too if needed.
 
-            List<Device> devicesToPotentiallyPoll; // Renamed for clarity
+            List<Device> devicesToPotentiallyPoll;
             try
             {
                 devicesToPotentiallyPoll = await dbContext.Devices.Where(d => d.IsEnabled).ToListAsync();
@@ -63,13 +67,11 @@ public class SnmpPollingService : IHostedService, IDisposable
 
             foreach (var device in devicesToPotentiallyPoll)
             {
-                // Check if it's time to poll this specific device based on its individual interval
                 bool needsPolling = !device.LastCheckTimestamp.HasValue ||
                                     (DateTime.UtcNow - device.LastCheckTimestamp.Value).TotalSeconds >= device.PollingIntervalSeconds;
 
                 if (!needsPolling)
                 {
-                    // _logger.LogTrace("Skipping poll for {DeviceName} ({IP}). Not time yet.", device.Name, device.IPAddress);
                     continue;
                 }
 
@@ -81,114 +83,151 @@ public class SnmpPollingService : IHostedService, IDisposable
                 {
                     DeviceId = device.Id,
                     Timestamp = DateTime.UtcNow,
-                    WasOnline = false // Assume offline until proven otherwise
-                    // SysUpTimeSeconds, RawSystemDescription, TotalRamKBytes will be set if successful
+                    WasOnline = false
                 };
 
                 try
                 {
                     var endpoint = new IPEndPoint(IPAddress.Parse(device.IPAddress), device.Port);
                     var community = new OctetString(device.CommunityString);
+                    _logger.LogInformation("Device {DevName} ({DevIP}): Community created: '{Community}'", device.Name, device.IPAddress, device.CommunityString);
 
-                    // *** MODIFIED: Only include the three requested OIDs ***
                     var variablesToGet = new List<Variable>
                     {
                         new Variable(SysUpTimeOid),
                         new Variable(SysDescrOid),
-                        new Variable(TotalRamOid) // Added Total RAM OID
+                        new Variable(CpuLoadOid),
+                        new Variable(RamAllocUnitsOid),
+                        new Variable(RamTotalSizeOid),
+                        new Variable(RamUsedSizeOid),
+                        new Variable(DiskCAllocUnitsOid),
+                        new Variable(DiskCTotalSizeOid),
+                        new Variable(DiskCUsedSizeOid)
                     };
+                    _logger.LogInformation("Device {DevName} ({DevIP}): Variables to get list created. Count: {VarCount}", device.Name, device.IPAddress, variablesToGet.Count);
 
                     VersionCode snmpVersionCode = device.SnmpVersion == SnmpVersionOption.V1 ? VersionCode.V1 : VersionCode.V2;
 
-                    // *** MODIFIED: Use an integer timeout for GetAsync ***
-                    // The overload with CancellationToken.None might not have a default timeout or use a very long one.
-                    // It's better to use the overload that explicitly takes an int timeout in milliseconds.
+                    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    _logger.LogInformation("Device {DevName}: Sending SNMP GET request with 10-second timeout.", device.Name);
+                    IList<Variable> results = await Messenger.GetAsync(snmpVersionCode, endpoint, community, variablesToGet, cts.Token);
+                    _logger.LogInformation("Device {DevName}: SNMP GET call completed. Results count: {Count}", device.Name, results?.Count ?? 0);
 
-                    IList<Variable> results = await Messenger.GetAsync(snmpVersionCode, endpoint, community, variablesToGet, CancellationToken.None);
-
-                    // *** MODIFIED: Check if results is not null and if *any* variable was returned,
-                    // as some OIDs might be valid while others are not.
-                    // A more robust check would be `results.Count == variablesToGet.Count` if you expect all OIDs to exist.
-                    // For now, if we get any valid data, consider it a partial success.
                     if (results != null && results.Any(v => !(v.Data is NoSuchInstance || v.Data is NoSuchObject || v.Data is EndOfMibView)))
                     {
-                        pollSuccess = true; // Mark as successful if at least one OID returned valid data
+                        pollSuccess = true;
                         historyEntry.WasOnline = true;
                         device.LastStatus = "Online";
                         device.LastErrorMessage = null;
 
-                        // Process results
+                        long? ramAllocUnitsVal = null, ramTotalUnitsVal = null, ramUsedUnitsVal = null;
+                        long? diskCAllocUnitsVal = null, diskCTotalUnitsVal = null, diskCUsedUnitsVal = null;
+                        int? cpuLoadVal = null;
+
                         foreach (var variable in results)
                         {
                             if (variable.Data is NoSuchInstance || variable.Data is NoSuchObject || variable.Data is EndOfMibView)
                             {
                                 _logger.LogWarning("SNMP OID {Oid} not found or at end of MIB on device {DeviceIP} ({DeviceName})", variable.Id, device.IPAddress, device.Name);
-                                continue; // Skip this variable, but poll might still be a success overall
+                                continue;
                             }
 
                             if (variable.Id.Equals(SysUpTimeOid) && variable.Data is TimeTicks uptime)
                             {
-                                historyEntry.SysUpTimeSeconds = uptime.ToUInt32() / 100; // TimeTicks are in hundredths of a second
+                                historyEntry.SysUpTimeSeconds = uptime.ToUInt32() / 100;
                                 _logger.LogInformation("Device {DevName}: Uptime: {UpTime}s", device.Name, historyEntry.SysUpTimeSeconds);
                             }
                             else if (variable.Id.Equals(SysDescrOid) && variable.Data is OctetString sysDescrStr)
                             {
-                                string description = sysDescrStr.ToString();
-                                // *** ADDED: Store RawSystemDescription in historyEntry ***
-                                if (historyEntry != null) // Should always be true here
+                                string newDescription = sysDescrStr.ToString();
+                                _logger.LogInformation("Device {DevName}: SysDescr received (length {Length}): {DescriptionSample}",
+                                    device.Name,
+                                    newDescription.Length,
+                                    newDescription.Substring(0, Math.Min(newDescription.Length, 70)) + (newDescription.Length > 70 ? "..." : ""));
+                                string osVersionToStore = newDescription.Length > 255 ? newDescription.Substring(0, 255) : newDescription;
+                                if (device.OSVersion != osVersionToStore)
                                 {
-                                    historyEntry.RawSystemDescription = description;
-                                }
-                                _logger.LogInformation("Device {DevName}: SysDescr: {Description}", device.Name, description);
-
-                                // Optionally update Device.OSVersion if it's blank (as before)
-                                if (string.IsNullOrEmpty(device.OSVersion))
-                                {
-                                    device.OSVersion = description.Length > 255 ? description.Substring(0, 255) : description;
-                                    _logger.LogInformation("Updated OSVersion for {DevName} from SysDescr", device.Name);
+                                    device.OSVersion = osVersionToStore;
+                                    _logger.LogInformation("Updated device.OSVersion for {DevName} with content from SysDescr.", device.Name);
                                 }
                             }
-                            // *** ADDED: Parsing for TotalRamOid ***
-                            else if (variable.Id.Equals(TotalRamOid) && variable.Data is Integer32 ramSize) // hrMemorySize is Integer32
+                            else if (variable.Id.Equals(CpuLoadOid) && variable.Data is Integer32 cpuLoad)
                             {
-                                if (historyEntry != null) // Should always be true here
-                                {
-                                    historyEntry.TotalRamKBytes = ramSize.ToInt32();
-                                }
-                                _logger.LogInformation("Device {DevName}: Total RAM: {RAM} KBytes", device.Name, historyEntry.TotalRamKBytes);
+                                cpuLoadVal = cpuLoad.ToInt32();
                             }
-                            // Removed processing for CpuIdleOid, MemTotalRealOid, MemAvailRealOid
+                            else if (variable.Id.Equals(RamAllocUnitsOid) && variable.Data is Integer32 ramAllocValResult) { ramAllocUnitsVal = ramAllocValResult.ToInt32(); }
+                            else if (variable.Id.Equals(RamTotalSizeOid) && variable.Data is Integer32 ramTotalValResult) { ramTotalUnitsVal = ramTotalValResult.ToInt32(); }
+                            else if (variable.Id.Equals(RamUsedSizeOid) && variable.Data is Integer32 ramUsedValResult) { ramUsedUnitsVal = ramUsedValResult.ToInt32(); }
+                            else if (variable.Id.Equals(DiskCAllocUnitsOid) && variable.Data is Integer32 diskCAllocValResult) { diskCAllocUnitsVal = diskCAllocValResult.ToInt32(); }
+                            else if (variable.Id.Equals(DiskCTotalSizeOid) && variable.Data is Integer32 diskCTotalValResult) { diskCTotalUnitsVal = diskCTotalValResult.ToInt32(); }
+                            else if (variable.Id.Equals(DiskCUsedSizeOid) && variable.Data is Integer32 diskCUsedValResult) { diskCUsedUnitsVal = diskCUsedValResult.ToInt32(); }
+                        }
+
+                        if (cpuLoadVal.HasValue)
+                        {
+                            historyEntry.CpuLoadPercentage = cpuLoadVal.Value;
+                            _logger.LogInformation("Device {DevName}: CPU Load: {CPULoad}%", device.Name, historyEntry.CpuLoadPercentage);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Device {DevName}: CPU Load data not retrieved or invalid.", device.Name);
+                        }
+
+                        if (ramAllocUnitsVal.HasValue && ramTotalUnitsVal.HasValue && ramUsedUnitsVal.HasValue &&
+                            ramAllocUnitsVal.Value > 0 && ramTotalUnitsVal.Value > 0)
+                        {
+                            long totalRamBytes = ramTotalUnitsVal.Value * ramAllocUnitsVal.Value;
+                            long usedRamBytes = ramUsedUnitsVal.Value * ramAllocUnitsVal.Value;
+                            historyEntry.TotalRam = totalRamBytes / 1024;
+                            if (totalRamBytes > 0)
+                            {
+                                historyEntry.MemoryUsagePercentage = Math.Round(((decimal)usedRamBytes / totalRamBytes) * 100, 2);
+                            }
+                            _logger.LogInformation("Device {DevName}: RAM Usage: {RAMPercent:F2}% ({UsedKB}KB / {TotalKB}KB)",
+                                device.Name, historyEntry.MemoryUsagePercentage, usedRamBytes / 1024, totalRamBytes / 1024);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Device {DevName}: Missing some RAM metrics (AllocUnits, Total, Used) for percentage calculation or values were invalid.", device.Name);
+                        }
+
+                        if (diskCAllocUnitsVal.HasValue && diskCTotalUnitsVal.HasValue && diskCUsedUnitsVal.HasValue &&
+                            diskCAllocUnitsVal.Value > 0 && diskCTotalUnitsVal.Value > 0)
+                        {
+                            long totalDiskCBytes = diskCTotalUnitsVal.Value * diskCAllocUnitsVal.Value;
+                            long usedDiskCBytes = diskCUsedUnitsVal.Value * diskCAllocUnitsVal.Value;
+                            historyEntry.TotalDisk = totalDiskCBytes / 1024;
+                            if (totalDiskCBytes > 0)
+                            {
+                                historyEntry.DiskUsagePercentage = Math.Round(((decimal)usedDiskCBytes / totalDiskCBytes) * 100, 2);
+                            }
+                            _logger.LogInformation("Device {DevName}: Disk C: Usage: {DiskPercent:F2}% ({UsedKB}KB / {TotalKB}KB)",
+                                device.Name, historyEntry.DiskUsagePercentage, usedDiskCBytes / 1024, totalDiskCBytes / 1024);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Device {DevName}: Missing some Disk C: metrics (AllocUnits, Total, Used) for percentage calculation or values were invalid.", device.Name);
                         }
                     }
-                    else // This 'else' handles cases where results might be null or empty, or all OIDs error out.
+                    else
                     {
-                        _logger.LogWarning("SNMP poll to {DeviceIP} ({DeviceName}) returned no valid data or results array was null/empty.", device.IPAddress, device.Name);
+                        _logger.LogWarning("Device {DevName}: No valid SNMP data received.", device.Name);
                         pollErrorMessage = "No valid SNMP data received.";
-                        // device.LastStatus will be set to Offline in finally if pollSuccess is false
                     }
                 }
-                catch (Lextm.SharpSnmpLib.Messaging.TimeoutException tex)
+                catch (OperationCanceledException)
                 {
-                    _logger.LogWarning(tex, "SNMP timeout for device {DeviceName} ({DeviceIP})", device.Name, device.IPAddress);
-                    device.LastStatus = "Timeout"; // Specific status for timeout
+                    _logger.LogWarning("SNMP request timed out for device {DeviceName} ({DeviceIP}) after 10 seconds.", device.Name, device.IPAddress);
+                    device.LastStatus = "Timeout";
                     pollErrorMessage = "Timeout during SNMP request.";
                 }
                 catch (SnmpException snmpEx)
                 {
-                    _logger.LogWarning(snmpEx, "SNMP error polling device {DeviceName} ({DeviceIP})", device.Name, device.IPAddress);
-                    // Set a more specific status based on the error
-                    if (snmpEx.Message.ToLower().Contains("authorizationerror") || snmpEx.Message.ToLower().Contains("community"))
-                    {
-                        device.LastStatus = "AuthError";
-                        pollErrorMessage = "Authentication Failure (Wrong Community String?)";
-                    }
-                    else
-                    {
-                        device.LastStatus = "SNMPError";
-                        pollErrorMessage = $"SNMP Error: {snmpEx.Message}";
-                    }
+                    _logger.LogWarning(snmpEx, "SNMP error polling device {DeviceName} ({DeviceIP}): {ErrorDetails}", device.Name, device.IPAddress, snmpEx.Message);
+                    device.LastStatus = snmpEx.Message.Contains("authorizationerror") ? "AuthError" : "SNMPError";
+                    pollErrorMessage = $"SNMP Error: {snmpEx.Message}";
                 }
-                catch (FormatException formatEx) // Can happen if IPAddress.Parse fails
+                catch (FormatException formatEx)
                 {
                     _logger.LogError(formatEx, "Invalid IP Address format for device {DeviceName} ({DeviceIP})", device.Name, device.IPAddress);
                     device.LastStatus = "ConfigError";
@@ -196,49 +235,45 @@ public class SnmpPollingService : IHostedService, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Generic error polling device {DeviceName} ({DeviceIP})", device.Name, device.IPAddress);
-                    device.LastStatus = "Error"; // More generic error status
+                    _logger.LogError(ex, "Unexpected error polling device {DeviceName} ({DeviceIP}): {ErrorDetails}", device.Name, device.IPAddress, ex.Message);
+                    device.LastStatus = "Error";
                     pollErrorMessage = ex.Message;
                 }
-                finally // This block will always execute for the current device
+                finally
                 {
-                    // Update Device status in DB
+                    _logger.LogInformation("Device {DevName}: Entering finally block. Poll success: {Success}. Status: {Status}. Error: {Error}",
+                        device.Name, pollSuccess, device.LastStatus, pollErrorMessage);
+
                     device.LastCheckTimestamp = DateTime.UtcNow;
-                    if (pollSuccess)
+                    if (!pollSuccess)
                     {
-                        // LastStatus already set to "Online" if pollSuccess is true
-                    }
-                    else
-                    {
-                        // If LastStatus wasn't set by a specific exception (Timeout, AuthError), set it to Offline.
-                        if (string.IsNullOrEmpty(device.LastStatus) || device.LastStatus == "Online" /* if it was online before but failed now */)
+                        if (string.IsNullOrEmpty(device.LastStatus) || device.LastStatus == "Online")
                         {
                             device.LastStatus = "Offline";
                         }
                         device.LastErrorMessage = pollErrorMessage ?? "Polling failed (unknown reason).";
                     }
 
-                    // Add history entry regardless of poll success to record the attempt
                     dbContext.DeviceHistories.Add(historyEntry);
                 }
-            } // end foreach device
+            } 
 
             try
             {
-                await dbContext.SaveChangesAsync(); // Save all changes (Device status updates and new DeviceHistory entries)
+                await dbContext.SaveChangesAsync();
                 _logger.LogInformation("Finished DoWork cycle. Changes saved to database.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "SNMP Polling Service: Error saving changes to database after polling cycle.");
             }
-        } // end using scope
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("SNMP Polling Service stopping at {time}.", DateTimeOffset.Now);
-        _timer?.Change(Timeout.Infinite, 0); // Stop the timer
+        _timer?.Change(Timeout.Infinite, 0);
         return Task.CompletedTask;
     }
 
@@ -247,5 +282,3 @@ public class SnmpPollingService : IHostedService, IDisposable
         _timer?.Dispose();
     }
 }
-
-// } // End namespace if you added one
