@@ -27,7 +27,6 @@ namespace LoginWeb.Models
 
         public bool IsEnabled { get; set; } = true;
         public int PollingIntervalSeconds { get; set; } = 60;
-        public string? DeviceType { get; set; }
         public string? OSVersion { get; set; }
 
         [StringLength(50)]
@@ -36,8 +35,10 @@ namespace LoginWeb.Models
         public DateTime? LastErrorTimestamp { get; set; }
         public string? LastErrorMessage { get; set; }
 
+        public string? HealthStatus { get; set; } // e.g., "Healthy", "Warning", "Critical"
 
-     
+        public string? HealthStatusReason { get; set; } // e.g., "High CPU usage", "Low disk space"
+
         // --- SNMP v2c Configuration ---
         public SnmpVersionOption SnmpVersion { get; set; } = SnmpVersionOption.V2c;
 

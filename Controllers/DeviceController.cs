@@ -3,11 +3,6 @@ using Microsoft.EntityFrameworkCore; // Needed for ToListAsync, FindAsync etc.
 using System.Linq;
 using LoginWeb.Models;
 using LoginWeb.Data;
-//using System.Security.Cryptography; // No longer needed here if EncryptionService is removed
-//using System.Text; // No longer needed here
-//using System; // Already implicitly available or via other usings
-//using System.IO; // No longer needed if using [FromBody]
-//using Org.BouncyCastle.Crypto.Digests; // No longer needed here
 using System.Threading.Tasks; // Needed for async/await
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations; // For ILogger
@@ -43,9 +38,6 @@ namespace LoginWeb.Controllers
                     DateTime? lastCheckTimestampUtc = null;
                     if (d.LastCheckTimestamp.HasValue)
                     {
-                        // Crucially ensure the Kind is Utc IF it was stored as Utc
-                        // If EF Core already retrieved it as Unspecified, specify it as Utc
-                        // because you KNOW you stored it as DateTime.UtcNow
                         lastCheckTimestampUtc = DateTime.SpecifyKind(d.LastCheckTimestamp.Value, DateTimeKind.Utc);
                     }
 
@@ -62,12 +54,10 @@ namespace LoginWeb.Controllers
                         d.CommunityString,
                         d.PollingIntervalSeconds,
                         LatestSysUpTimeSeconds = d.Histories.FirstOrDefault()?.SysUpTimeSeconds,
-                        LatestRawSystemDescription = d.Histories.FirstOrDefault()?.RawSystemDescription
                     };
                 }).ToList();
 
 
-                // Your logging snippet (now LastCheckTimestamp in firstDeviceForLog should have Kind = Utc)
                 if (devicesData.Any())
                 {
                     var firstDeviceForLog = devicesData.First();
@@ -106,13 +96,12 @@ namespace LoginWeb.Controllers
                 return NotFound();
             }
 
-            return device; // Consider a DeviceDetailDto to control returned data
+            return device;
         }
 
 
         // POST: api/Device
         [HttpPost]
-        // [Authorize(Roles="Admin,User")] // Or just [Authorize]
         public async Task<ActionResult<Device>> CreateDevice([FromBody] DeviceCreateDto dto)
         {
             // Input validation is handled by [ApiController] and DTO attributes
@@ -148,14 +137,12 @@ namespace LoginWeb.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while creating device."); // Use ILogger
-                // Consider more specific error handling (e.g., DbUpdateException for uniqueness)
                 return StatusCode(500, new { success = false, message = "Internal Server Error creating device." });
             }
         }
 
         // PUT: api/Device/5
-        [HttpPut("{id}")] // Use HttpPut for replacing/updating resource
-        // [Authorize(Roles="Admin,User")] // Or just [Authorize]
+        [HttpPut("{id}")]
         public async Task<IActionResult> EditDevice(int id, [FromBody] DeviceEditDto dto)
         {
             var device = await _context.Devices.FindAsync(id);
@@ -181,7 +168,7 @@ namespace LoginWeb.Controllers
             {
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("Device updated successfully: {DeviceId}", id);
-                return NoContent(); // Standard successful PUT response
+                return NoContent(); 
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -198,7 +185,6 @@ namespace LoginWeb.Controllers
 
         // DELETE: api/Device/5
         [HttpDelete("{id}")]
-        // [Authorize(Roles="Admin,User")] // Or just [Authorize]
         public async Task<IActionResult> DeleteDevice(int id)
         {
             var device = await _context.Devices.FindAsync(id);

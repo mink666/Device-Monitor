@@ -4,6 +4,7 @@ using LoginWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LoginWeb.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250526063454_AddHealthStatusAndDiskMetric")]
+    partial class AddHealthStatusAndDiskMetric
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,6 +37,9 @@ namespace LoginWeb.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DeviceType")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("HealthStatus")
                         .HasColumnType("nvarchar(max)");
@@ -99,22 +105,19 @@ namespace LoginWeb.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("DiskUsagePercentage")
-                        .HasColumnType("decimal(5,2)");
+                        .HasColumnType("decima(5,2)");
 
                     b.Property<decimal?>("MemoryUsagePercentage")
                         .HasColumnType("decimal(5, 2)");
+
+                    b.Property<string>("RawSystemDescription")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long?>("SysUpTimeSeconds")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
-
-                    b.Property<long?>("TotalDisk")
-                        .HasColumnType("bigint");
-
-                    b.Property<long?>("TotalRam")
-                        .HasColumnType("bigint");
 
                     b.Property<bool>("WasOnline")
                         .HasColumnType("bit");
