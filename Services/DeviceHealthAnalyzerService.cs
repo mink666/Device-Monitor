@@ -6,12 +6,12 @@ public class DeviceHealthAnalyzerService : BackgroundService
 {
     private readonly ILogger<DeviceHealthAnalyzerService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly TimeSpan _analysisInterval = TimeSpan.FromMinutes(1); 
+    private readonly TimeSpan _analysisInterval = TimeSpan.FromMinutes(5); 
 
     // THRESHOLDS 
     private const decimal CpuWarningThreshold = 80.0m; 
     private const decimal RamWarningThreshold = 85.0m; 
-    private const decimal DiskWarningThreshold = 30.0m; 
+    private const decimal DiskWarningThreshold = 40.0m; 
     private const int StaleDataThresholdMinutes = 15; 
 
     public DeviceHealthAnalyzerService(ILogger<DeviceHealthAnalyzerService> logger, IServiceScopeFactory scopeFactory)

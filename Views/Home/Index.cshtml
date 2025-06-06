@@ -268,12 +268,13 @@
     <a id="editLink" class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#editDeviceModal">Edit</a>
     <a id="deleteLink" class="dropdown-item" href="javascript:void(0);" onclick="return confirmDelete()">Delete</a>
 </div>
-
-<form action="/Reports/Generate" method="post" class="mb-3">
+    
+<form id="reportForm" class="mb-3">
     <div class="d-flex align-items-center">
-        <label for="reportTitle" class="me-2">Report Title:</label>
-        <input type="text" class="me-2 form-control" id="reportTitle" name="title" required style="width: 200px;">
-        <button type="submit" class="btn btn-primary">Download Report</button>
+        <label for="reportTitleInput" class="me-2">Report Title:</label>
+        <input type="text" class="me-2 form-control" id="reportTitleInput" required style="width: 200px;">
+
+        <button type="button" id="generateReportButton" class="btn btn-primary">Generate Summary Report</button>
     </div>
 </form>
 <script src="~/js/device.js"></script>
