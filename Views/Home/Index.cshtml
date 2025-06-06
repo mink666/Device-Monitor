@@ -72,16 +72,15 @@
 <table class="table table-striped table-hover">
     <thead>
         <tr>
-            <th>ID</th>
             <th>Name</th>
             <th>IP Address</th>
             <th>Port</th>
             <th>Active</th>
-            <th>Polling Status</th>
+            <th>Polling</th>
             <th>Health Status</th>
-            <th>CPU %</th>
-            <th>RAM %</th>
-            <th>Disk C %</th>
+            <th>CPU</th>
+            <th>RAM</th>
+            <th>Disk C</th>
             <th>Uptime</th>
             <th>Last Check</th>
         </tr>
@@ -111,7 +110,6 @@
                 data-health-reason="@device.HealthStatusReason"
                 class="@GetRowClassForHealth(device.HealthStatus)"
                 oncontextmenu="return showContextMenu(e, this);">
-                <td>@device.Id</td>
                 <td>@device.Name</td>
                 <td>@device.IPAddress</td>
                 <td>@device.Port</td>

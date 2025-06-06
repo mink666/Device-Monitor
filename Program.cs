@@ -77,6 +77,7 @@ builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
 builder.Services.AddHostedService<SnmpPollingService>();
+builder.Services.AddHostedService<DeviceHealthAnalyzerService>();
 // Add services to the container.
 var app = builder.Build();
 
