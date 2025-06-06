@@ -374,3 +374,41 @@ async function confirmDelete() {
     if (contextMenu) contextMenu.style.display = "none"; 
     return false;
 }
+
+//for reports
+const generateReportButton = document.getElementById('generateReportButton');
+const reportTitleInput = document.getElementById('reportTitleInput');
+
+// This check tells you if the script found your HTML elements
+if (generateReportButton && reportTitleInput) {
+
+    console.log("SUCCESS: Report button listener attached."); // <-- ADD THIS LINE
+
+    generateReportButton.addEventListener('click', function () {
+
+        console.log("EVENT: Generate Report button was clicked!"); // <-- ADD THIS LINE
+
+        const reportTitle = reportTitleInput.value.trim();
+
+        if (!reportTitle) {
+            alert('Please enter a report title.');
+            reportTitleInput.focus();
+            return;
+        }
+
+        const reportTab = window.open('', '_blank');
+        if (!reportTab) {
+            alert("Popup blocked! Please allow popups for this site.");
+            return;
+        }
+
+        reportTab.document.title = reportTitle;
+        reportTab.document.body.innerHTML = "<h3>Generating your report, please wait...</h3>";
+
+        const reportUrl = `/Reports/Generate?title=${encodeURIComponent(reportTitle)}`;
+        reportTab.location.href = reportUrl;
+    });
+} else {
+    // If you see this message, there's a typo in your HTML id attributes
+    console.error("ERROR: Could not find 'generateReportButton' or 'reportTitleInput'. Check the IDs in Index.cshtml.");
+}
