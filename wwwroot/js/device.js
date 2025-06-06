@@ -1,11 +1,82 @@
 ﻿let selectedRow = null;
 const apiBaseUrl = "/api/Device"; // Centralize API base URL
+
+// function for health status
+function getRowClassForHealthJS(statusString) {
+    if (statusString === 'Healthy') return 'table-success';
+    if (statusString === 'Warning') return 'table-warning';
+    if (statusString === 'Unreachable') return 'table-danger';
+    return '';
+}
+
+function getBootstrapBadgeClassJS(statusString) {
+    if (statusString === 'Healthy') return 'bg-success';
+    if (statusString === 'Warning') return 'bg-warning text-dark';
+    if (statusString === 'Unreachable') return 'bg-danger';
+    return 'bg-secondary';
+}
+
+function truncateTextJS(text, maxLength) {
+    if (!text || text.length <= maxLength) return text || "";
+    return text.substring(0, maxLength) + "...";
+}
+// --- Formatting Helper Functions ---
+function formatUptimeJS(totalSecondsStr, status) {
+    const totalSeconds = parseInt(totalSecondsStr, 10);
+    if (isNaN(totalSeconds) || totalSeconds < 0) return "N/A";
+    if (totalSeconds === 0 && status === "Online") return "< 1 min";
+    if (totalSeconds === 0) return "0s";
+
+    const days = Math.floor(totalSeconds / (3600 * 24));
+    const hrs = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = Math.floor(totalSeconds % 60);
+    return `${days}d ${hrs}h ${mins}m ${secs}s`;
+}
+
+function formatCpuJS(cpuLoad) {
+    if (typeof cpuLoad === 'number') {
+        return `${cpuLoad.toFixed(2)}%`;
+    }
+    return "N/A";
+}
+
+function formatStorageJS(usedKBytes, totalKBytes, percentage) {
+    if (typeof totalKBytes !== 'number' || totalKBytes <= 0) {
+        return (typeof percentage === 'number') ? `${percentage.toFixed(2)}%` : "N/A";
+    }
+    if (typeof usedKBytes !== 'number' && typeof percentage === 'number') {
+        usedKBytes = totalKBytes * (percentage / 100);
+    }
+    if (typeof usedKBytes !== 'number') {
+        return (typeof percentage === 'number') ? `${percentage.toFixed(2)}%` : "N/A";
+    }
+
+    let cUsed = usedKBytes;
+    let usedUnit = "KB";
+    let cTotal = totalKBytes;
+    let totalUnit = "KB";
+
+    if (cUsed >= 1024 * 1024) { cUsed /= (1024 * 1024); usedUnit = "GB"; }
+    else if (cUsed >= 1024) { cUsed /= 1024; usedUnit = "MB"; }
+
+    if (cTotal >= 1024 * 1024) { cTotal /= (1024 * 1024); totalUnit = "GB"; }
+    else if (cTotal >= 1024) { cTotal /= 1024; totalUnit = "MB"; }
+
+    const percentageString = (typeof percentage === 'number') ? ` (${percentage.toFixed(2)}%)` : "";
+
+    if (usedUnit === totalUnit) {
+        return `${cUsed.toFixed(2)} / ${cTotal.toFixed(2)} ${totalUnit}${percentageString}`;
+    } else {
+        return `${cUsed.toFixed(2)} ${usedUnit} / ${cTotal.toFixed(2)} ${totalUnit}${percentageString}`;
+    }
+}
+
+// --- Context Menu ---
 function showContextMenu(e, row) { // Changed 'event' to 'e'
-    console.log("showContextMenu CALLED. Event:", e, "Row:", row);
     e.preventDefault(); 
     selectedRow = row;
     var deviceId = row.dataset.id;
-    console.log("Device ID from row.dataset.id:", deviceId);
 
     const editLinkEl = document.getElementById('editLink');
     const deleteLinkEl = document.getElementById('deleteLink');
@@ -22,24 +93,10 @@ function showContextMenu(e, row) { // Changed 'event' to 'e'
     return false;
 }
 
-// Function to fetch all devices and render them in the table
-async function fetchAndRenderDevices() {
-    try {
-        const response = await fetch(apiBaseUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const devices = await response.json();
-        updateDeviceTable(devices); // Use your existing function to populate
-    } catch (error) {
-        console.error("Error fetching devices:", error);
-        alert("Failed to load devices. Please try refreshing the page.");
-    }
-}
-
-// Function to create a single table row (helper)
+// --- Device Table Population ---
 function createDeviceRow(device) {
     const row = document.createElement("tr");
+
     // Ensure these data-* attributes match exactly what you have in Index.cshtml's loop
     row.setAttribute("data-id", device.id);
     row.setAttribute("data-name", device.name);
@@ -49,32 +106,29 @@ function createDeviceRow(device) {
     row.setAttribute("data-isenabled", device.isEnabled.toString().toLowerCase());
     row.setAttribute("data-pollinginterval", device.pollingIntervalSeconds);
     row.setAttribute("data-status", device.lastStatus || "Unknown");
-    row.setAttribute("data-lastcheck", device.lastCheckTimestamp ? new Date(device.lastCheckTimestamp).toLocaleString() : "N/A");
     row.setAttribute("data-osversion", device.osVersion || "N/A");
-    row.setAttribute("data-latest-sys-up-time-seconds", device.latestSysUpTimeSeconds || "N/A");
+    row.setAttribute("data-cpu-load", device.latestCpuLoadPercentage || "");
+    row.setAttribute("data-mem-usage-percent", device.latestMemoryUsagePercentage || "");
+    row.setAttribute("data-disk-usage-percent", device.latestDiskUsagePercentage || "");
+    row.setAttribute("data-total-ram-kb", device.latestTotalRamKBytes || "");
+    row.setAttribute("data-used-ram-kb", device.latestUsedRamKBytes || "");
+    row.setAttribute("data-total-disk-kb", device.latestTotalDiskKBytes || "");
+    row.setAttribute("data-used-disk-kb", device.latestUsedDiskKBytes || "");
+    row.setAttribute("data-sysuptime", device.latestSysUpTimeSeconds || "");
+    row.setAttribute("data-lastcheck", device.lastCheckTimestamp ? new Date(device.lastCheckTimestamp).toLocaleString() : "N/A");
+
+    //Health status attributes
+    row.setAttribute("data-health-status", device.healthStatus || "Unknown");
+    row.setAttribute("data-health-reason", device.healthStatusReason || "");
+
+    row.className = getRowClassForHealthJS(device.healthStatus);
 
     row.oncontextmenu = function (e) { return showContextMenu(e, this); };
 
-    let lastCheckDisplay = "N/A";
-    if (device.lastCheckTimestamp) {
-        try {
-            lastCheckDisplay = new Date(device.lastCheckTimestamp).toLocaleString();
-        } catch (e) {
-            console.error("Error parsing lastCheckTimestamp:", e);
-        }
-    }
-    function formatUptimeJS(totalSeconds) {
-        if (totalSeconds === null || totalSeconds === undefined || totalSeconds < 0) return "N/A";
-        if (totalSeconds === 0 && device.lastStatus === "Online") return "< 1 min";
-        if (totalSeconds === 0) return "0s";
-        const days = Math.floor(totalSeconds / (3600 * 24));
-        totalSeconds %= (3600 * 24);
-        const hrs = Math.floor(totalSeconds / 3600);
-        totalSeconds %= 3600;
-        const mins = Math.floor(totalSeconds / 60);
-        const secs = Math.floor(totalSeconds % 60);
-        return `${days}d ${hrs}h ${mins}m ${secs}s`;
-    }
+    let lastCheckDisplay = device.lastCheckTimestamp ? new Date(device.lastCheckTimestamp).toLocaleString() : "N/A";
+    const healthReasonHtml = device.healthStatusReason
+        ? `<small class="d-block text-muted" title="${device.healthStatusReason}">${truncateTextJS(device.healthStatusReason, 50)}</small>`
+        : "";
 
     row.innerHTML = `
         <td>${device.id}</td>
@@ -83,15 +137,27 @@ function createDeviceRow(device) {
         <td>${device.port}</td>
         <td>${device.isEnabled ? 'Enabled' : 'Disabled'}</td>
         <td>${device.lastStatus || "Unknown"}</td>
-        <td>${lastCheckDisplay}</td>
-        <td>${device.osVersion || "N/A"}</td> 
+        <td>
+            <span class="badge ${getBootstrapBadgeClassJS(device.healthStatus)}">
+                ${device.healthStatus || "Unknown"}
+            </span>
+            ${healthReasonHtml}
+        </td>
+        <td>${formatCpuJS(device.latestCpuLoadPercentage)}</td>
+        <td>${formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage)}</td>
+        <td>${formatStorageJS(device.latestUsedDiskKBytes, device.latestTotalDiskKBytes, device.latestDiskUsagePercentage)}</td>        
         <td>${formatUptimeJS(device.latestSysUpTimeSeconds)}</td>
+        <td>${lastCheckDisplay}</td>
     `;
     return row;
 }
 function updateDeviceTable(devices) {
     const deviceListTableBody = document.getElementById("deviceList");
-    deviceList.innerHTML = ""; // Clear existing rows
+    if (!deviceListTableBody) {
+        console.error("Element with ID 'deviceList' not found.");
+        return;
+    }
+    deviceListTableBody.innerHTML = ""; // Clear existing rows
 
     if (devices && devices.length > 0) {
         devices.forEach(device => {
@@ -99,14 +165,50 @@ function updateDeviceTable(devices) {
             deviceListTableBody.appendChild(newRow);
         });
     } else {
-        const colCount = 11; // Adjust if you have more/fewer columns
+        const colCount = document.querySelector("#deviceList").closest("table").querySelectorAll("thead th").length || 11; // Adjust to new column count
         deviceListTableBody.innerHTML = `<tr><td colspan="${colCount}" class="text-center">No devices found.</td></tr>`;
     }
 }
 
+// Function to fetch all devices and render them in the table
+async function fetchAndRenderDevices() {
+    try {
+        const response = await fetch(apiBaseUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const devices = await response.json();
+        updateDeviceTable(devices); 
+    } catch (error) {
+        console.error("Error fetching devices:", error);
+        const deviceListTableBody = document.getElementById("deviceList");
+        if (deviceListTableBody) {
+            const colCount = document.querySelector("#deviceList").closest("table").querySelectorAll("thead th").length || 11;
+            deviceListTableBody.innerHTML = `<tr><td colspan="${colCount}" class="text-center text-danger">Failed to load devices.</td></tr>`;
+        }
+    }
+}
 
+// --- Document Ready & Event Listeners ---
 document.addEventListener("DOMContentLoaded", function () {
     fetchAndRenderDevices(); // Load devices when the page is ready
+
+    const refreshButton = document.getElementById("refreshDeviceListButton");
+        refreshButton.addEventListener("click", function () {
+
+            const originalHtml = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Refreshing...';
+
+            fetchAndRenderDevices() // This is your existing function
+                .catch(error => {
+                    alert("Failed to refresh device data. Please try again.");
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = originalHtml;
+                });
+        });
 
     const addDeviceModalEl = document.getElementById('addDeviceModal');
     const addDeviceModalInstance = addDeviceModalEl ? new bootstrap.Modal(addDeviceModalEl) : null;
@@ -121,7 +223,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 IPAddress: document.getElementById("deviceIP").value.trim(),
                 Port: Number(document.getElementById("devicePort").value),
                 CommunityString: document.getElementById("deviceCommunityString").value.trim(), 
-                IsEnabled: document.getElementById("deviceIsEnabled").checked, 
+                IsEnabled: document.getElementById("deviceIsEnabled").value === 'true',
                 PollingIntervalSeconds: Number(document.getElementById("devicePollingInterval").value), 
             };
 
@@ -187,7 +289,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (response.ok) { // For PUT, 204 No Content is typical success
                     alert("✅ Device updated successfully!");
-                    const rowToUpdate = document.querySelector(`#deviceList tr[data-id="${id}"]`);
+                    fetchAndRenderDevices();
                     if (rowToUpdate) {
                         const displayData = {
                             id: parseInt(id), name: deviceDto.Name, ipAddress: deviceDto.IPAddress, port: deviceDto.Port,

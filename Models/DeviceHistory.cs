@@ -34,5 +34,7 @@ namespace LoginWeb.Models
 
         public long? TotalRam{ get; set; } 
         public long? TotalDisk { get; set; }
+        public long? UsedRamKBytes { get; set; }
+        public long? UsedDiskKBytes { get; set; }
     }
 }
