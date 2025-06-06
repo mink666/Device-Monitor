@@ -54,6 +54,20 @@ namespace LoginWeb.Controllers
                         d.CommunityString,
                         d.PollingIntervalSeconds,
                         LatestSysUpTimeSeconds = d.Histories.FirstOrDefault()?.SysUpTimeSeconds,
+                        // RAM Metrics - Direct Mapping from latestHistory
+                        LatestTotalRamKBytes = d.Histories.FirstOrDefault()?.TotalRam,
+                        LatestUsedRamKBytes = d.Histories.FirstOrDefault()?.UsedRamKBytes,
+                        LatestMemoryUsagePercentage = d.Histories.FirstOrDefault()?.MemoryUsagePercentage,
+
+                        // Disk Metrics - Direct Mapping from latestHistory
+                        LatestTotalDiskKBytes = d.Histories.FirstOrDefault()?.TotalDisk,
+                        LatestUsedDiskKBytes = d.Histories.FirstOrDefault()?.UsedDiskKBytes, 
+                        LatestDiskUsagePercentage = d.Histories.FirstOrDefault()?.DiskUsagePercentage,
+                        // Health status from Device model for API
+                        HealthStatus = d.HealthStatus.ToString(), 
+                        HealthStatusReason = d.HealthStatusReason,
+                        LatestCpuLoadPercentage = d.Histories.FirstOrDefault()?.CpuLoadPercentage,
+
                     };
                 }).ToList();
 
@@ -112,7 +126,7 @@ namespace LoginWeb.Controllers
                 var newDevice = new Device
                 {
                     Name = dto.Name,
-                    IPAddress = dto.IpAddress, 
+                    IPAddress = dto.IPAddress, 
                     Port = dto.Port,
                     CommunityString = dto.CommunityString, 
                     IsEnabled = dto.IsEnabled,
@@ -152,7 +166,7 @@ namespace LoginWeb.Controllers
                 _logger.LogWarning("EditDevice requested for non-existent Id: {DeviceId}", id);
                 return NotFound(new { success = false, message = "Device not found." });
             }
-
+            
             // --- Update properties from DTO ---
             device.Name = dto.Name;
             device.IPAddress = dto.IPAddress; 

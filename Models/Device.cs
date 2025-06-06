@@ -9,6 +9,13 @@ namespace LoginWeb.Models
         V2c = 1,
         V3 = 3
     }
+    public enum DeviceHealth
+    {
+        Unknown = 0, 
+        Healthy = 1,
+        Warning = 2,
+        Unreachable = 3
+    }
     public class Device
     {
         [Key]
@@ -35,10 +42,8 @@ namespace LoginWeb.Models
         public DateTime? LastErrorTimestamp { get; set; }
         public string? LastErrorMessage { get; set; }
 
-        public string? HealthStatus { get; set; } // e.g., "Healthy", "Warning", "Critical"
-
-        public string? HealthStatusReason { get; set; } // e.g., "High CPU usage", "Low disk space"
-
+        public DeviceHealth HealthStatus { get; set; } = DeviceHealth.Unknown;
+        public string? HealthStatusReason { get; set; }
         // --- SNMP v2c Configuration ---
         public SnmpVersionOption SnmpVersion { get; set; } = SnmpVersionOption.V2c;
 

@@ -46,7 +46,39 @@ public class HomeController : Controller
                                            .OrderByDescending(h => h.Timestamp)
                                            .Select(h => h.SysUpTimeSeconds)
                                            .FirstOrDefault(),
-                    // Add LatestTotalRamKBytes here if you re-add it
+                    // RAM Metrics 
+                    LatestTotalRamKBytes = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.TotalRam) 
+                                       .FirstOrDefault(),
+                    LatestUsedRamKBytes = d.Histories 
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.UsedRamKBytes)
+                                       .FirstOrDefault(),
+                    LatestMemoryUsagePercentage = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.MemoryUsagePercentage)
+                                       .FirstOrDefault(),
+
+                    // Disk Metrics
+                    LatestTotalDiskKBytes = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.TotalDisk)
+                                       .FirstOrDefault(),
+                    LatestUsedDiskKBytes = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.UsedDiskKBytes) 
+                                       .FirstOrDefault(),
+                    LatestDiskUsagePercentage = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.DiskUsagePercentage)
+                                       .FirstOrDefault(),
+                    LatestCpuLoadPercentage = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.CpuLoadPercentage)
+                                       .FirstOrDefault(),
+                    HealthStatus = d.HealthStatus,
+                    HealthStatusReason = d.HealthStatusReason,
                 })
                 .ToListAsync();
 

@@ -113,12 +113,12 @@ public class SnmpPollingService : IHostedService, IDisposable
                     IList<Variable> results = await Messenger.GetAsync(snmpVersionCode, endpoint, community, variablesToGet, cts.Token);
                     _logger.LogInformation("Device {DevName}: SNMP GET call completed. Results count: {Count}", device.Name, results?.Count ?? 0);
 
-                    if (results != null && results.Any(v => !(v.Data is NoSuchInstance || v.Data is NoSuchObject || v.Data is EndOfMibView)))
+                    if (results != null && results.Count > 0 && results.Any(v => !(v.Data is NoSuchInstance || v.Data is NoSuchObject || v.Data is EndOfMibView)))
                     {
                         pollSuccess = true;
                         historyEntry.WasOnline = true;
-                        device.LastStatus = "Online";
-                        device.LastErrorMessage = null;
+                        //device.LastStatus = "Online";
+                        //device.LastErrorMessage = null;
 
                         long? ramAllocUnitsVal = null, ramTotalUnitsVal = null, ramUsedUnitsVal = null;
                         long? diskCAllocUnitsVal = null, diskCTotalUnitsVal = null, diskCUsedUnitsVal = null;
@@ -179,6 +179,7 @@ public class SnmpPollingService : IHostedService, IDisposable
                             long totalRamBytes = ramTotalUnitsVal.Value * ramAllocUnitsVal.Value;
                             long usedRamBytes = ramUsedUnitsVal.Value * ramAllocUnitsVal.Value;
                             historyEntry.TotalRam = totalRamBytes / 1024;
+                            historyEntry.UsedRamKBytes = usedRamBytes / 1024;
                             if (totalRamBytes > 0)
                             {
                                 historyEntry.MemoryUsagePercentage = Math.Round(((decimal)usedRamBytes / totalRamBytes) * 100, 2);
@@ -197,6 +198,7 @@ public class SnmpPollingService : IHostedService, IDisposable
                             long totalDiskCBytes = diskCTotalUnitsVal.Value * diskCAllocUnitsVal.Value;
                             long usedDiskCBytes = diskCUsedUnitsVal.Value * diskCAllocUnitsVal.Value;
                             historyEntry.TotalDisk = totalDiskCBytes / 1024;
+                            historyEntry.UsedDiskKBytes = usedDiskCBytes / 1024;
                             if (totalDiskCBytes > 0)
                             {
                                 historyEntry.DiskUsagePercentage = Math.Round(((decimal)usedDiskCBytes / totalDiskCBytes) * 100, 2);
@@ -252,8 +254,17 @@ public class SnmpPollingService : IHostedService, IDisposable
                             device.LastStatus = "Offline";
                         }
                         device.LastErrorMessage = pollErrorMessage ?? "Polling failed (unknown reason).";
+                        device.HealthStatus = DeviceHealth.Unreachable;
+                        device.HealthStatusReason = device.LastErrorMessage;
                     }
+                    else // pollSuccess is true
+                    {
+                        device.LastStatus = "Online"; 
+                        device.LastErrorMessage = null;
 
+                        device.HealthStatus = DeviceHealth.Healthy;
+                        device.HealthStatusReason = "Device is online and responding normally.";
+                    }
                     dbContext.DeviceHistories.Add(historyEntry);
                 }
             } 
@@ -263,13 +274,16 @@ public class SnmpPollingService : IHostedService, IDisposable
                 await dbContext.SaveChangesAsync();
                 _logger.LogInformation("Finished DoWork cycle. Changes saved to database.");
             }
+            catch (DbUpdateException dbEx) 
+            {
+                _logger.LogError(dbEx, "SNMP Polling Service: Database error saving changes after polling cycle.");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "SNMP Polling Service: Error saving changes to database after polling cycle.");
             }
         }
     }
-
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("SNMP Polling Service stopping at {time}.", DateTimeOffset.Now);

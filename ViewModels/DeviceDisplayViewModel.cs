@@ -15,10 +15,24 @@ namespace LoginWeb.ViewModels // Or LoginWeb.Models if you prefer
         public string? LastStatus { get; set; }
         public DateTime? LastCheckTimestamp { get; set; }
         public string? OSVersion { get; set; }
-        public string CommunityString { get; set; } // For data-* attributes
-        public int PollingIntervalSeconds { get; set; } // For data-* attributes
+        public string CommunityString { get; set; } 
+        public int PollingIntervalSeconds { get; set; }
 
-        // New properties from DeviceHistory (latest record)
+        //Latest Records
         public long? LatestSysUpTimeSeconds { get; set; }
+
+        // RAM Metrics
+        public long? LatestTotalRamKBytes { get; set; }      
+        public long? LatestUsedRamKBytes { get; set; }        
+        public decimal? LatestMemoryUsagePercentage { get; set; } 
+
+        // Disk C Metrics 
+        public long? LatestTotalDiskKBytes { get; set; }     
+        public long? LatestUsedDiskKBytes { get; set; }      
+        public decimal? LatestDiskUsagePercentage { get; set; }
+        public decimal? LatestCpuLoadPercentage { get; set; }
+        // Health Status 
+        public Models.DeviceHealth HealthStatus { get; set; }
+        public string? HealthStatusReason { get; set; }
     }
 }
