@@ -131,7 +131,6 @@ function createDeviceRow(device) {
         : "";
 
     row.innerHTML = `
-        <td>${device.id}</td>
         <td>${device.name}</td>
         <td>${device.ipAddress}</td>
         <td>${device.port}</td>
