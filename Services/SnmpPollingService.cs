@@ -268,6 +268,11 @@ public class SnmpPollingService : IHostedService, IDisposable
                             device.HealthStatusReason = "Device is online and responding normally.";
                         }
                     }
+
+                    historyEntry.PollingStatus = device.LastStatus;
+                    historyEntry.HealthStatus = device.HealthStatus;
+                    historyEntry.HealthStatusReason = device.HealthStatusReason;
+
                     dbContext.DeviceHistories.Add(historyEntry);
                 }
             } 

@@ -1,5 +1,8 @@
 ﻿let selectedRow = null;
 const apiBaseUrl = "/api/Device"; // Centralize API base URL
+let allDevicesData = []; // Cache for holding the latest device data
+let selectedDeviceId = null;
+let messageBoxTimeout;
 
 // function for health status
 function getRowClassForHealthJS(statusString) {
@@ -71,7 +74,142 @@ function formatStorageJS(usedKBytes, totalKBytes, percentage) {
         return `${cUsed.toFixed(2)} ${usedUnit} / ${cTotal.toFixed(2)} ${totalUnit}${percentageString}`;
     }
 }
+// --- NEW: UI Rendering Functions ---
 
+/**
+ * Renders the device icons in the left panel.
+ */
+function renderDeviceIcons(devices) {
+    const iconList = document.getElementById("device-icon-list");
+    if (!iconList) return;
+
+    iconList.innerHTML = ""; // Clear previous icons
+
+    if (!devices || devices.length === 0) {
+        iconList.innerHTML = '<p class="text-muted">No devices found.</p>';
+        return;
+    }
+
+    devices.forEach(device => {
+        const card = document.createElement("div");
+        card.className = `device-card ${getBootstrapBadgeClassJS(device.healthStatus)}`;
+        card.dataset.id = device.id;
+
+        // Add selected class if this device is the currently selected one
+        if (device.id === selectedDeviceId) {
+            card.classList.add('selected');
+        }
+
+        card.innerHTML = `
+            <i class="bi bi-pc-display"></i>
+            <div class="device-card-name">${truncateTextJS(device.name, 20)}</div>
+        `;
+
+        card.addEventListener("click", () => {
+            selectedDeviceId = device.id;
+            displayDeviceDetails(device.id);
+
+            // Update selection visual
+            document.querySelectorAll('.device-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+        });
+
+        iconList.appendChild(card);
+    });
+}
+/**
+ * Displays the details of a single device in the right panel.
+ */
+function displayDeviceDetails(deviceId) {
+    const device = allDevicesData.find(d => d.id === deviceId);
+    if (!device) {
+        return;
+    }
+
+    // Hide placeholder, show content
+    document.getElementById("details-placeholder").style.display = "none";
+    document.getElementById("details-content").style.display = "block";
+
+    // --- Populate Header ---
+    document.getElementById("details-device-name").innerText = device.name;
+    const badge = document.getElementById("details-health-status-badge");
+    badge.className = `badge ${getBootstrapBadgeClassJS(device.healthStatus)}`;
+    badge.innerText = device.healthStatus;
+
+    // --- Populate Info Table ---
+    const infoTable = document.getElementById("details-info-table");
+    infoTable.innerHTML = `
+        <tr><th scope="row">IP Address</th><td>${device.ipAddress}</td></tr>
+        <tr><th scope="row">Port</th><td>${device.port}</td></tr>
+        <tr><th scope="row">Monitoring</th><td>${device.isEnabled ? 'Enabled' : 'Disabled'}</td></tr>
+        <tr><th scope="row">Polling Status</th><td>${device.lastStatus || "Unknown"}</td></tr>
+        <tr><th scope="row">Uptime</th><td>${formatUptimeJS(device.latestSysUpTimeSeconds)}</td></tr>
+        <tr><th scope="row">Last Check</th><td>${device.lastCheckTimestamp ? new Date(device.lastCheckTimestamp).toLocaleString() : "N/A"}</td></tr>
+        <tr><th scope="row">Health Reason</th><td>${device.healthStatusReason || "N/A"}</td></tr>
+    `;
+
+    // --- Update Metric Graphs ---
+    // CPU
+    const cpuBar = document.getElementById("details-cpu-bar");
+    const cpuPercent = device.latestCpuLoadPercentage || 0;
+    cpuBar.style.width = `${cpuPercent.toFixed(2)}%`;
+    cpuBar.setAttribute('aria-valuenow', cpuPercent.toFixed(2));
+    cpuBar.innerText = `${cpuPercent.toFixed(2)}%`;
+    document.getElementById("details-cpu-label").innerText = `${cpuPercent.toFixed(2)}%`;
+
+    // RAM
+    const ramBar = document.getElementById("details-ram-bar");
+    const ramPercent = device.latestMemoryUsagePercentage || 0;
+    ramBar.style.width = `${ramPercent.toFixed(2)}%`;
+    ramBar.setAttribute('aria-valuenow', ramPercent.toFixed(2));
+    ramBar.innerText = `${ramPercent.toFixed(2)}%`;
+    document.getElementById("details-ram-label").innerText = formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage);
+
+    // Disk
+    const diskBar = document.getElementById("details-disk-bar");
+    const diskPercent = device.latestDiskUsagePercentage || 0;
+    diskBar.style.width = `${diskPercent.toFixed(2)}%`;
+    diskBar.setAttribute('aria-valuenow', diskPercent.toFixed(2));
+    diskBar.innerText = `${diskPercent.toFixed(2)}%`;
+    document.getElementById("details-disk-label").innerText = formatStorageJS(device.latestUsedDiskKBytes, device.latestTotalDiskKBytes, device.latestDiskUsagePercentage);
+
+    // --- Update Generate Report Button ---
+    const reportButton = document.getElementById('generate-device-summary-button');
+    reportButton.dataset.deviceId = device.id; // Store device ID for the action
+    reportButton.dataset.deviceName = device.name; // Store name for the report title
+}
+//Message box function
+function showMessage(message, type = 'success') {
+    const messageBox = document.getElementById('customMessageBox');
+    if (!messageBox) return;
+
+    // Clear any existing timer to prevent premature hiding
+    clearTimeout(messageBoxTimeout);
+
+    // Set the message and style
+    messageBox.textContent = message;
+    messageBox.className = 'message-box'; // Reset classes
+    messageBox.classList.add(type === 'success' ? 'message-box-success' : 'message-box-error');
+
+    // Show the message box
+    messageBox.style.display = 'block';
+
+    // Set a timer to automatically hide the message box after 3 seconds
+    messageBoxTimeout = setTimeout(() => {
+        messageBox.style.display = 'none';
+    }, 3000); // 3000 milliseconds = 3 seconds
+}
+//Clear modal function
+function cleanupModalEffects() {
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => {
+        backdrop.remove();
+    });
+
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = 'auto';
+    document.body.style.paddingRight = '';
+}
 // --- Context Menu ---
 function showContextMenu(e, row) { // Changed 'event' to 'e'
     e.preventDefault(); 
@@ -131,32 +269,29 @@ function createDeviceRow(device) {
         : "";
 
     row.innerHTML = `
-        <td>${device.name}</td>
-        <td>${device.ipAddress}</td>
-        <td>${device.port}</td>
-        <td>${device.isEnabled ? 'Enabled' : 'Disabled'}</td>
-        <td>${device.lastStatus || "Unknown"}</td>
-        <td>
-            <span class="badge ${getBootstrapBadgeClassJS(device.healthStatus)}">
-                ${device.healthStatus || "Unknown"}
-            </span>
-            ${healthReasonHtml}
-        </td>
-        <td>${formatCpuJS(device.latestCpuLoadPercentage)}</td>
-        <td>${formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage)}</td>
-        <td>${formatStorageJS(device.latestUsedDiskKBytes, device.latestTotalDiskKBytes, device.latestDiskUsagePercentage)}</td>        
-        <td>${formatUptimeJS(device.latestSysUpTimeSeconds)}</td>
-        <td>${lastCheckDisplay}</td>
+    <td data-label="Name">${device.name}</td>
+    <td data-label="IP Address">${device.ipAddress}</td>
+    <td data-label="Port">${device.port}</td>
+    <td data-label="Active">${device.isEnabled ? 'Enabled' : 'Disabled'}</td>
+    <td data-label="Polling">${device.lastStatus || "Unknown"}</td>
+    <td data-label="Health Status">
+        <span class="badge ${getBootstrapBadgeClassJS(device.healthStatus)}">
+            ${device.healthStatus || "Unknown"}
+        </span>
+        ${healthReasonHtml}
+    </td>
+    <td data-label="CPU">${formatCpuJS(device.latestCpuLoadPercentage)}</td>
+    <td data-label="RAM">${formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage)}</td>
+    <td data-label="Disk C">${formatStorageJS(device.latestUsedDiskKBytes, device.latestTotalDiskKBytes, device.latestDiskUsagePercentage)}</td>
+    <td data-label="Uptime" class="col-uptime">${formatUptimeJS(device.latestSysUpTimeSeconds)}</td>
+    <td data-label="Last Check" class="col-last-check">${lastCheckDisplay}</td>
     `;
     return row;
 }
 function updateDeviceTable(devices) {
     const deviceListTableBody = document.getElementById("deviceList");
-    if (!deviceListTableBody) {
-        console.error("Element with ID 'deviceList' not found.");
-        return;
-    }
-    deviceListTableBody.innerHTML = ""; // Clear existing rows
+    if (!deviceListTableBody) return;
+    deviceListTableBody.innerHTML = "";
 
     if (devices && devices.length > 0) {
         devices.forEach(device => {
@@ -171,15 +306,23 @@ function updateDeviceTable(devices) {
 
 // Function to fetch all devices and render them in the table
 async function fetchAndRenderDevices() {
+    document.getElementById('device-list-loader')?.remove();
     try {
         const response = await fetch(apiBaseUrl);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const devices = await response.json();
+        allDevicesData = devices; // Cache the data
+
+        renderDeviceIcons(devices);
         updateDeviceTable(devices); 
+        if (selectedDeviceId) {
+            displayDeviceDetails(selectedDeviceId);
+        }
     } catch (error) {
         console.error("Error fetching devices:", error);
+        document.getElementById("device-icon-list").innerHTML = `<p class="text-danger">Failed to load devices.</p>`;
         const deviceListTableBody = document.getElementById("deviceList");
         if (deviceListTableBody) {
             const colCount = document.querySelector("#deviceList").closest("table").querySelectorAll("thead th").length || 11;
@@ -190,7 +333,22 @@ async function fetchAndRenderDevices() {
 
 // --- Document Ready & Event Listeners ---
 document.addEventListener("DOMContentLoaded", function () {
+
     fetchAndRenderDevices(); // Load devices when the page is ready
+    const searchInput = document.getElementById('deviceSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+
+            // Filter the cached device data based on the search term
+            const filteredDevices = allDevicesData.filter(device => {
+                return device.name.toLowerCase().includes(searchTerm);
+            });
+
+            // Re-render the icon list with only the filtered devices
+            renderDeviceIcons(filteredDevices);
+        });
+    }
 
     const refreshButton = document.getElementById("refreshDeviceListButton");
         refreshButton.addEventListener("click", function () {
@@ -201,7 +359,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetchAndRenderDevices() // This is your existing function
                 .catch(error => {
-                    alert("Failed to refresh device data. Please try again.");
+                    showMessage("❌Failed to refresh device data. Please try again.", 'error');
                 })
                 .finally(() => {
                     this.disabled = false;
@@ -235,22 +393,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (response.ok) { // Standard way to check for success (HTTP 200-299)
                     const newDevice = await response.json(); // The controller returns the created device
-                    alert("Device created successfully!");
+                    showMessage("✅Device created successfully!",'success');
                     const deviceListTableBody = document.getElementById("deviceList");
                     const newRow = createDeviceRow(newDevice);
                     deviceListTableBody.appendChild(newRow);
 
-                    if (addDeviceModalInstance) addDeviceModalInstance.hide();
                     addDeviceForm.reset();
+
+                    addDeviceModalInstance.hide();
+
+                    setTimeout(() => {
+                        cleanupModalEffects();
+                        fetchAndRenderDevices();
+                    }, 500);
+                    
                 } else {
                     // Try to get more detailed error from API response
                     const errorResult = await response.json().catch(() => ({ message: "An unknown error occurred. Status: " + response.status }));
-                    alert("Error creating device: " + (errorResult.title || errorResult.message || "Please check your input."));
-                    console.error("Error creating device:", errorResult);
+                    showMessage("❌Error creating device: " + (errorResult.title || errorResult.message || "Please check your input."),'error');
                 }
             } catch (error) {
-                console.error("Fetch Error:", error);
-                alert("Failed to create device. Network error or server issue.");
+                showMessage("❌Failed to create device. Network error or server issue.",'error');
+            } finally {
+                if (addDeviceModalInstance) addDeviceModalInstance.hide();
             }
         });
     }
@@ -273,9 +438,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 PollingIntervalSeconds: Number(document.getElementById("editDevicePollingInterval").value),
             };
 
-            console.log("Device DTO to be sent to server:", JSON.stringify(deviceDto, null, 2)); // Pretty print the DTO
             if (!deviceDto.IPAddress || !deviceDto.Port || !deviceDto.CommunityString) {
-                alert("IP Address, Port, and Community String are required for editing.");
+                showMessage("❌IP Address, Port, and Community String are required for editing.",'error');
                 return; // Stop submission
             }
 
@@ -287,31 +451,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
                 if (response.ok) { // For PUT, 204 No Content is typical success
-                    alert("✅ Device updated successfully!");
+                    showMessage("✅ Device updated successfully!",'success');
                     fetchAndRenderDevices();
-                    if (rowToUpdate) {
-                        const displayData = {
-                            id: parseInt(id), name: deviceDto.Name, ipAddress: deviceDto.IPAddress, port: deviceDto.Port,
-                            communityString: deviceDto.CommunityString, isEnabled: deviceDto.IsEnabled,
-                            pollingIntervalSeconds: deviceDto.PollingIntervalSeconds,
-                            osVersion: deviceDto.OSVersion,
-                            lastStatus: selectedRow ? selectedRow.dataset.status : "Unknown", // Keep existing status from data-*
-                            lastCheckTimestamp: selectedRow ? selectedRow.dataset.lastcheck : null
-                        };
-                        const newRowContent = createDeviceRow(displayData); // create a new row
-                        rowToUpdate.parentNode.replaceChild(newRowContent, rowToUpdate); // replace old with new
-                    } else {
-                        fetchAndRenderDevices(); // Fallback: if row not found, just reload all
-                    }
-                    if (editDeviceModalInstance) editDeviceModalInstance.hide();
+                    
+                    editDeviceModalInstance.hide();
+
+                    setTimeout(() => {
+                        cleanupModalEffects(); // This is the function that fixes the scrollbar
+                        fetchAndRenderDevices();
+                    }, 500);
                 } else {
                     const errorResult = await response.json().catch(() => ({ message: `Server Error (${response.status})` }));
-                    alert("❌ Error updating device: " + (errorResult.title || errorResult.message));
-                    console.error("❌ Error updating device:", errorResult);
+                    showMessage("❌ Error updating device: " + (errorResult.title || errorResult.message),'error');
                 }
             } catch (error) {
-                console.error("❌ Fetch Error:", error);
-                alert("❌ Error updating device. Network error or server issue.");
+                showMessage("❌ Error updating device. Network error or server issue.",'error');
             }
         });
     }
@@ -345,7 +499,7 @@ window.addEventListener("click", function (event) {
 //Delete Function
 async function confirmDelete() {
     if (!selectedRow) {
-        alert("No device selected for deletion.");
+        showMessage("❌No device selected for deletion.",'error');
         return false;
     }
     const deviceId = selectedRow.dataset.id;
@@ -357,17 +511,23 @@ async function confirmDelete() {
             });
 
             if (response.ok) { // For DELETE, 204 No Content is success
-                alert("Device deleted successfully!");
+                showMessage("✅Device deleted successfully!",'success');
                 selectedRow.remove(); // selectedRow is the <tr> element
                 selectedRow = null; // Clear selectedRow
+                if (selectedDeviceId && selectedDeviceId == deviceId) {
+                    selectedDeviceId = null;
+                    document.getElementById('details-placeholder').style.display = 'block';
+                    document.getElementById('details-content').style.display = 'none';
+                }
+
+                // Re-fetch all data and redraw the entire UI to reflect the deletion.
+                await fetchAndRenderDevices();
             } else {
                 const errorResult = await response.json().catch(() => ({ message: `Server Error (${response.status})` }));
-                alert("Error deleting device: " + (errorResult.title || errorResult.message));
-                console.error("Error deleting device:", errorResult);
+                showMessage("❌Error deleting device: " + (errorResult.title || errorResult.message),'error');
             }
         } catch (error) {
-            console.error("Fetch Error:", error);
-            alert("Error deleting device. Network error or server issue.");
+            showMessage("❌Error deleting device. Network error or server issue.",'error');
         }
     }
     const contextMenu = document.getElementById("contextMenu");
@@ -381,24 +541,19 @@ const reportTitleInput = document.getElementById('reportTitleInput');
 
 // This check tells you if the script found your HTML elements
 if (generateReportButton && reportTitleInput) {
-
-    console.log("SUCCESS: Report button listener attached."); // <-- ADD THIS LINE
-
     generateReportButton.addEventListener('click', function () {
-
-        console.log("EVENT: Generate Report button was clicked!"); // <-- ADD THIS LINE
 
         const reportTitle = reportTitleInput.value.trim();
 
         if (!reportTitle) {
-            alert('Please enter a report title.');
+            showMessage('❌Please enter a report title.','error');
             reportTitleInput.focus();
             return;
         }
 
         const reportTab = window.open('', '_blank');
         if (!reportTab) {
-            alert("Popup blocked! Please allow popups for this site.");
+            showMessage("❌Popup blocked! Please allow popups for this site.",'error');
             return;
         }
 
@@ -409,6 +564,72 @@ if (generateReportButton && reportTitleInput) {
         reportTab.location.href = reportUrl;
     });
 } else {
-    // If you see this message, there's a typo in your HTML id attributes
     console.error("ERROR: Could not find 'generateReportButton' or 'reportTitleInput'. Check the IDs in Index.cshtml.");
 }
+
+// --- START: Historical Report ---
+
+// Get a reference to the new modal
+const historyReportModalEl = document.getElementById('historyReportModal');
+const historyReportModal = new bootstrap.Modal(historyReportModalEl);
+
+// 1. Listener for the button in the RIGHT-SIDE DETAILS PANEL
+const generateDeviceReportBtn = document.getElementById('generate-device-summary-button');
+if (generateDeviceReportBtn) {
+    generateDeviceReportBtn.addEventListener('click', function () {
+        const deviceId = this.dataset.deviceId;
+        const deviceName = this.dataset.deviceName;
+        if (!deviceId) {
+            showMessage('❌Please select a device first.','error');
+            return;
+        }
+
+        // Pre-populate the modal form
+        document.getElementById('historyReportDeviceId').value = deviceId;
+        document.getElementById('historyReportTitle').value = `${deviceName} - Performance Report`;
+
+        // Open the modal
+        historyReportModal.show();
+    });
+}
+
+// 2. Helper function to format date for datetime-local input
+const toLocalISOString = (date) => {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+    const localISOTime = (new Date(date - tzoffset)).toISOString().slice(0, 16);
+    return localISOTime;
+};
+
+// 3. Listeners for the "Now" buttons in the modal
+document.getElementById('setStartDateToNow').addEventListener('click', () => {
+    document.getElementById('historyReportStartDate').value = toLocalISOString(new Date());
+});
+document.getElementById('setEndDateToNow').addEventListener('click', () => {
+    document.getElementById('historyReportEndDate').value = toLocalISOString(new Date());
+});
+
+// 4. Listener for the final "Generate Report" SUBMIT button inside the modal
+document.getElementById('historyReportForm').addEventListener('submit', function (e) {
+    e.preventDefault(); // Prevent default form submission
+
+    const deviceId = document.getElementById('historyReportDeviceId').value;
+    const title = document.getElementById('historyReportTitle').value;
+    const startDate = document.getElementById('historyReportStartDate').value;
+    const endDate = document.getElementById('historyReportEndDate').value;
+
+    if (new Date(startDate) > new Date(endDate)) {
+        alert('Start date cannot be after the end date.','error');
+        return;
+    }
+
+    // Construct the URL for our new controller action
+    const reportUrl = `/Reports/GenerateHistoryReport?deviceId=${deviceId}&title=${encodeURIComponent(title)}&startDate=${startDate}&endDate=${endDate}`;
+
+    // Open the report in a new tab
+    window.open(reportUrl, '_blank');
+
+    // Hide the modal after generating
+    historyReportModal.hide();
+});
+
+// --- END: New Listeners for Historical Report ---

@@ -7,6 +7,16 @@ using Microsoft.AspNetCore.Authorization;
 using LoginWeb.ViewModels;
 using System.Threading.Tasks; // Required for async operations
 using Microsoft.EntityFrameworkCore; // Required for Include and ToListAsync
+
+public class DeviceHistoryReportViewModel
+{
+    public string DeviceName { get; set; }
+    public string DeviceIpAddress { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public List<DeviceHistory> HistoryRecords { get; set; }
+}
+
 public class ReportsController : Controller
 {
     private readonly AppDbContext _context;
@@ -63,8 +73,52 @@ public class ReportsController : Controller
 
         return File(pdfBytes, "application/pdf");
     }
+    // =======================================================================
+    //                  BEGIN: New Historical Report Action
+    // =======================================================================
+    [HttpGet]
+    public async Task<IActionResult> GenerateHistoryReport(int deviceId, string title, DateTime startDate, DateTime endDate)
+    {
+        var username = HttpContext.Session.GetString("Username");
+        if (HttpContext.Session.GetString("isLogin") == null)
+        {
+            return Unauthorized("You must be logged in to access reports.");
+        }
 
-    // You can add your action for the detailed history report here later
-    // [HttpGet]
-    // public async Task<IActionResult> GenerateDetailReport(int deviceId, DateTime startDate, DateTime endDate) { ... }
+        // --- Fetch Device and its specific history in the date range ---
+        var device = await _context.Devices.FindAsync(deviceId);
+        if (device == null)
+        {
+            return NotFound("The specified device could not be found.");
+        }
+
+        var historyRecords = await _context.DeviceHistories
+            .Where(h => h.DeviceId == deviceId && h.Timestamp >= startDate && h.Timestamp <= endDate)
+            .OrderBy(h => h.Timestamp) // Order chronologically
+            .ToListAsync();
+
+        if (!historyRecords.Any())
+        {
+            return BadRequest("No historical data found for the selected device in the specified date range.");
+        }
+
+        // --- Prepare the ViewModel for the report service ---
+        var reportViewModel = new DeviceHistoryReportViewModel
+        {
+            DeviceName = device.Name,
+            DeviceIpAddress = device.IPAddress,
+            StartDate = startDate,
+            EndDate = endDate,
+            HistoryRecords = historyRecords
+        };
+
+        // --- Call the new report service method ---
+        byte[] pdfBytes = PdfReportService.GenerateDeviceHistoryReport(title, reportViewModel, username);
+
+        // Return the generated PDF file
+        return File(pdfBytes, "application/pdf");
+    }
+    // =======================================================================
+    //                   END: New Historical Report Action
+    // =======================================================================
 }
