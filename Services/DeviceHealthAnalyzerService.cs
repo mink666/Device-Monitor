@@ -11,7 +11,7 @@ public class DeviceHealthAnalyzerService : BackgroundService
     // THRESHOLDS 
     private const decimal CpuWarningThreshold = 80.0m; 
     private const decimal RamWarningThreshold = 85.0m; 
-    private const decimal DiskWarningThreshold = 40.0m; 
+    private const decimal DiskWarningThreshold = 80.0m; 
     private const int StaleDataThresholdMinutes = 15; 
 
     public DeviceHealthAnalyzerService(ILogger<DeviceHealthAnalyzerService> logger, IServiceScopeFactory scopeFactory)

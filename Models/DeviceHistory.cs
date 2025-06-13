@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using LoginWeb.Models;
 
 namespace LoginWeb.Models 
 {
@@ -36,5 +37,12 @@ namespace LoginWeb.Models
         public long? TotalDisk { get; set; }
         public long? UsedRamKBytes { get; set; }
         public long? UsedDiskKBytes { get; set; }
+
+        [StringLength(50)]
+        public string? PollingStatus { get; set; } // e.g., "Online", "SNMP Error", "Ping Failed"
+
+        public DeviceHealth HealthStatus { get; set; } // The health status at the time of polling
+
+        public string? HealthStatusReason { get; set; } // The reason at the time of polling
     }
 }

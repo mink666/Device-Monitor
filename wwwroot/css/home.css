@@ -1,0 +1,116 @@
+﻿/* --- Custom Message Box --- */
+.message-box {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 2rem;
+    border-radius: 0.375rem;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 500;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 2000; /* Ensures it appears above everything */
+    transition: opacity 0.5s, top 0.5s;
+}
+
+.message-box-success {
+    background-color: #198754; /* Bootstrap success green */
+}
+
+.message-box-error {
+    background-color: #dc3545; /* Bootstrap danger red */
+}
+
+
+/* --- Device Icon Panel --- */
+.device-icon-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.device-card {
+    cursor: pointer;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    text-align: center;
+    /* This formula calculates the perfect width for a 3-column grid */
+    width: calc((100% - 2rem) / 3);
+    transition: transform 0.2s ease-in-out;
+    color: white;
+    font-weight: 500;
+}
+
+    .device-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .device-card.selected {
+        outline: 3px solid #0d6efd; /* Highlight selected device */
+    }
+
+    .device-card i {
+        font-size: 3rem; /* Larger PC icon */
+    }
+
+.device-card-name {
+    margin-top: 0.5rem;
+    word-wrap: break-word;
+}
+
+#device-details-view {
+    position: sticky; /* Makes the right panel stick on scroll */
+    top: 1rem;
+}
+
+/* --- Responsive Stacking Table for Mobile --- */
+@media (max-width: 767px) {
+
+    .table-responsive-stack thead {
+        display: none; /* Hide the original table headers on mobile */
+    }
+
+    .table-responsive-stack tr {
+        display: block;
+        margin-bottom: 1rem;
+        border-top: 1px solid #c5c5c5;
+        border-bottom: 1px solid #c5c5c5;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .table-responsive-stack td {
+        display: flex; 
+        justify-content: space-between; /* Pushes label to the left and data to the right */
+        align-items: center; /* Vertically centers the label and data */
+        padding: 0.5rem; /* Use simple padding */
+        border-top: 1px solid #eee;
+    }
+
+    .table-responsive-stack td:before {
+            /* The label no longer needs absolute positioning */
+            content: attr(data-label);
+            font-weight: bold;
+            text-align: left;
+            padding-right: 1rem;
+    }
+
+    .table-responsive-stack tr[oncontextmenu] {
+        display: block;
+    }
+}
+
+@media (min-width: 768px) {
+    .col-last-check {
+        /* Prevents the date and time from ever wrapping */
+        white-space: nowrap;
+    }
+
+    .col-uptime {
+        /* Sets a fixed width for the Uptime column on desktop */
+        width: 150px;
+    }
+}
