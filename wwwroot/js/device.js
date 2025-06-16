@@ -495,7 +495,6 @@ window.addEventListener("click", function (event) {
     }
 });
 
-
 //Delete Function
 async function confirmDelete() {
     if (!selectedRow) {

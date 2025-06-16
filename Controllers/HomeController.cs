@@ -91,7 +91,7 @@ public class HomeController : Controller
             return View(new List<DeviceDisplayViewModel>());
         }
     }
-    public IActionResult Privacy()
+    public IActionResult About()
     {
         return View();
     }

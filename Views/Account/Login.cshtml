@@ -9,9 +9,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]</title>
-    @* Link Bootstrap and your custom CSS directly since Layout is null *@
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="~/css/login.css"> 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/zephyr/bootstrap.min.css">
+    <link rel="stylesheet" href="~/css/login.css">
 
     <style>
         /* Ensure html/body take full height for centering wrapper */
@@ -22,9 +21,8 @@
         }
 
         body {
-            background: linear-gradient(145deg, #ff8a8a, #ff5252, #f53d74);
-            /* Fallback solid color */
-            background-color: #f53d74;
+            background: url('/images/spacex.jpg');
+            background-size: cover;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* Default BS font */
         }
 
@@ -39,7 +37,7 @@
         .login-card {
             max-width: 600px; /* Adjust max width */
             width: 100%;
-            background-color: #fff;
+            background-color: rgba(255, 255, 255, 0.70);
             border-radius: 1rem;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
             overflow: hidden; /* Keep child elements contained */
@@ -55,26 +53,6 @@
             position: relative; /* For potential absolute positioned elements */
             width: 100%; /* Full width */
         }
-        .graphic-panel .logo-text {
-            font-size: 2.5rem; /* Larger text */
-            font-weight: bold;
-            margin-bottom: 2rem;
-            letter-spacing: 1px;
-            /* Add custom font if needed */
-        }
-        /* Placeholder for the graphic - replace with an actual image */
-        .graphic-placeholder {
-            width: 80%;
-            max-width: 300px;
-            height: auto; /* Adjust based on image aspect ratio */
-            margin: 0 auto;
-        }
-
-            .graphic-placeholder img {
-                width: 100%;
-                height: auto;
-            }
-
 
         .form-panel {
             padding: 2.5rem 3rem; /* Adjust padding */
@@ -190,7 +168,7 @@
         <div class="login-card container-fluid">
             @* Use container-fluid for edge-to-edge within card *@
                 <div class="form-panel">
-                    <h1 class="form-title mb-1">Welcome! 👋</h1>
+                    <h1 class="form-title mb-1">Welcome to SmarTrack! 👋</h1>
                     <p class="form-subtitle">Please login to access the dashboard.</p>
 
                     @* Display TempData Error Message (for redirects) *@
@@ -209,7 +187,7 @@
                     <div id="loginForm">
                         @* Keep div wrapper if needed by JS, otherwise can be form *@
                         @* Add AntiForgeryToken if login() function includes it in fetch request *@
-                        @* @Html.AntiForgeryToken() *@
+                        @Html.AntiForgeryToken()
 
                         <div class="mb-3">
                             <label for="username" class="form-label small fw-medium">Username</label> @* Changed label *@
