@@ -6,9 +6,10 @@
     var errorMessage = TempData["AdminMessageError"] as string;
     // var currentAdminUsername = HttpContextAccessor.HttpContext?.Session.GetString("Username");
 }
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/zephyr/bootstrap.min.css">
+
 
 <h1>@ViewData["Title"]</h1>
-<p>Manage application users.</p>
 <hr />
 
 @if (!string.IsNullOrEmpty(successMessage))
@@ -59,7 +60,7 @@ else
                         }
                         else
                         {
-                            <span class="badge bg-secondary">Deactivated</span>
+                            <span class="badge bg-danger">Deactivated</span>
                         }
                     </td>
                     <td>
@@ -68,20 +69,21 @@ else
 
                         @* Form for Toggling Account Status *@
                         @* Optional: Add check here if you want to prevent self-deactivation *@
-                        @* @if (user.Username != currentAdminUsername) { *@
+                        @if (user.Username != "admin")
+                        {
                         <form asp-controller="Admin" asp-action="ToggleAccountStatus" asp-route-id="@user.Id" method="post" style="display:inline; margin-left: 5px;">
                             @Html.AntiForgeryToken() @* Security token *@
 
                             @if (user.AccountStatus)
                             {
-                                <button type="submit" class="btn btn-warning btn-sm" title="Deactivate User Account">Deactivate</button>
+                                <button type="submit" class="btn btn-danger btn-sm" title="Deactivate User Account">Deactivate</button>
                             }
                             else
                             {
                                 <button type="submit" class="btn btn-success btn-sm" title="Activate User Account">Activate</button>
                             }
                         </form>
-                        @* } else { <span class="text-muted ms-2">(Current Admin)</span> } *@
+                        } else { <span class="text-muted ms-2">(Current Admin)</span> }
                     </td>
                 </tr>
             }

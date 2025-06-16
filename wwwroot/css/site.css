@@ -36,3 +36,7 @@ body {
         font-size: 0.875rem;
     }
 }
+
+.btn-outline-light.text-white:hover {
+    color: black !important;
+}
