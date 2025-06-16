@@ -1,4 +1,4 @@
-# 📡 **Device-Monitor**
+# 📡 **SmarTracker**
 *A Device Monitoring Application using ASP.NET Core MVC & REST APIs*
 
 ## 🚀 **Overview**
