@@ -9,6 +9,7 @@ function getRowClassForHealthJS(statusString) {
     if (statusString === 'Healthy') return 'table-success';
     if (statusString === 'Warning') return 'table-warning';
     if (statusString === 'Unreachable') return 'table-danger';
+    if (statusString === 'Unknown') return 'table-secondary';
     return '';
 }
 
@@ -91,30 +92,41 @@ function renderDeviceIcons(devices) {
     }
 
     devices.forEach(device => {
-        const card = document.createElement("div");
-        card.className = `device-card ${getBootstrapBadgeClassJS(device.healthStatus)}`;
-        card.dataset.id = device.id;
+        try {
+            const card = document.createElement("div");
+            const statusClass = device.healthStatus ? getBootstrapBadgeClassJS(device.healthStatus) : 'bg-secondary';
+            const displayName = device.name ? truncateTextJS(device.name, 20) : "Unnamed Device";
 
-        // Add selected class if this device is the currently selected one
-        if (device.id === selectedDeviceId) {
-            card.classList.add('selected');
+            //card.className = `device-card ${getBootstrapBadgeClassJS(device.healthStatus)}`;
+            card.className = `device-card ${statusClass}`;
+            card.dataset.id = device.id;
+
+            // Add selected class if this device is the currently selected one
+            if (device.id === selectedDeviceId) {
+                card.classList.add('selected');
+            }
+
+            //card.innerHTML = `
+            //    <i class="bi bi-pc-display"></i>
+            //    <div class="device-card-name">${truncateTextJS(device.name, 20)}</div>
+            //`;
+            card.innerHTML = `<i class="bi bi-pc-display"></i><div class="device-card-name">${displayName}</div>`;
+
+            card.addEventListener("click", () => {
+                selectedDeviceId = device.id;
+                displayDeviceDetails(device.id);
+
+                // Update selection visual
+                document.querySelectorAll('.device-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+            });
+
+            iconList.appendChild(card);
+        } catch (err) {
+            // If any error happens while creating a card, log it to the console.
+            console.error("Failed to render a device card. The device data might be incomplete. Error:", err);
+            console.error("Problematic Device Object:", device);
         }
-
-        card.innerHTML = `
-            <i class="bi bi-pc-display"></i>
-            <div class="device-card-name">${truncateTextJS(device.name, 20)}</div>
-        `;
-
-        card.addEventListener("click", () => {
-            selectedDeviceId = device.id;
-            displayDeviceDetails(device.id);
-
-            // Update selection visual
-            document.querySelectorAll('.device-card').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-        });
-
-        iconList.appendChild(card);
     });
 }
 /**
@@ -391,12 +403,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     body: JSON.stringify(deviceDto)
                 });
 
-                if (response.ok) { // Standard way to check for success (HTTP 200-299)
-                    const newDevice = await response.json(); // The controller returns the created device
+                if (response.ok) { 
+                    //const newDevice = await response.json(); // The controller returns the created device
                     showMessage("✅Device created successfully!",'success');
-                    const deviceListTableBody = document.getElementById("deviceList");
-                    const newRow = createDeviceRow(newDevice);
-                    deviceListTableBody.appendChild(newRow);
+                    //const deviceListTableBody = document.getElementById("deviceList");
+                    //const newRow = createDeviceRow(newDevice);
+                    //deviceListTableBody.appendChild(newRow);
 
                     addDeviceForm.reset();
 
@@ -418,6 +430,34 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (addDeviceModalInstance) addDeviceModalInstance.hide();
             }
         });
+
+        // --- START: SignalR Connection for Live Notifications ---
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/notificationHub")
+            .withAutomaticReconnect()
+            .build();
+
+        // This function is called by the server whenever it sends a "ReceiveWarning" message
+        connection.on("ReceiveWarning", (deviceName, reason) => {
+            // Use our existing message box to display the notification!
+            showMessage(`WARNING for ${deviceName}: ${reason}`, 'error');
+
+            // Also refresh the main UI to show the new status in the lists
+            fetchAndRenderDevices();
+        });
+
+        // Function to start the connection, with retry logic
+        async function startSignalR() {
+            try {
+                await connection.start();
+                console.log("SignalR Connected.");
+            } catch (err) {
+                console.error("SignalR Connection Failed: ", err);
+                setTimeout(startSignalR, 5000); // Retry connection after 5 seconds
+            }
+        };
+
+        startSignalR(); // Start the connection when the page loads
     }
 
     const editDeviceModalEl = document.getElementById('editDeviceModal');

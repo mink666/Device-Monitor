@@ -1,7 +1,8 @@
 ﻿using LoginWeb.Data;
 using LoginWeb.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.AspNetCore.SignalR;
 public class DeviceHealthAnalyzerService : BackgroundService
 {
     private readonly ILogger<DeviceHealthAnalyzerService> _logger;
@@ -52,6 +53,7 @@ public class DeviceHealthAnalyzerService : BackgroundService
         using (var scope = _scopeFactory.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
 
             // Get all devices that are currently enabled for monitoring.
             // We include their latest history record for analysis.
@@ -104,6 +106,8 @@ public class DeviceHealthAnalyzerService : BackgroundService
                     device.HealthStatus = DeviceHealth.Warning;
                     device.HealthStatusReason = newWarningReason;
                     _logger.LogWarning("Device '{DeviceName}' moved to WARNING state. Reason: {Reason}", device.Name, newWarningReason);
+                    await hubContext.Clients.All.SendAsync("ReceiveWarning", device.Name, newWarningReason);
+
                 }
                 else
                 {

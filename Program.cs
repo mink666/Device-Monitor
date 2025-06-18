@@ -78,6 +78,7 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
 builder.Services.AddHostedService<SnmpPollingService>();
 builder.Services.AddHostedService<DeviceHealthAnalyzerService>();
+builder.Services.AddSignalR();
 // Add services to the container.
 var app = builder.Build();
 
@@ -110,6 +111,7 @@ app.MapRazorPages();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
+app.MapHub<NotificationHub>("/notificationHub");
 
 QuestPDF.Settings.License = LicenseType.Community;
 app.Run();

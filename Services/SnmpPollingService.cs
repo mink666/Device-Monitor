@@ -269,7 +269,7 @@ public class SnmpPollingService : IHostedService, IDisposable
                         }
                     }
 
-                    historyEntry.PollingStatus = device.LastStatus;
+                    historyEntry.PollingStatus = device.LastStatus; 
                     historyEntry.HealthStatus = device.HealthStatus;
                     historyEntry.HealthStatusReason = device.HealthStatusReason;
 
@@ -280,7 +280,7 @@ public class SnmpPollingService : IHostedService, IDisposable
             try
             {
                 await dbContext.SaveChangesAsync();
-                _logger.LogInformation("Finished DoWork cycle. Changes saved to database.");
+                _logger.LogInformation("Finished DoWork cycle. Changes saved to database.");    
             }
             catch (DbUpdateException dbEx) 
             {
