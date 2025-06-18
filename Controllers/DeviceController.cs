@@ -221,17 +221,7 @@ namespace LoginWeb.Controllers
         // --- REMOVED EncryptionService ---
         // The EncryptionService inner class is removed as it's no longer needed
         // for the SNMPv2c CommunityString approach.
-        [HttpGet("test-notification")]
-        public async Task<IActionResult> TestNotification([FromServices] IHubContext<NotificationHub> hubContext)
-        {
-            string deviceName = "Test Device";
-            string reason = "This is a test warning sent at " + DateTime.Now.ToShortTimeString();
 
-            // This directly sends the message to all connected clients
-            await hubContext.Clients.All.SendAsync("ReceiveWarning", deviceName, reason);
-
-            return Ok("Test notification sent.");
-        }
     }
 
 }
