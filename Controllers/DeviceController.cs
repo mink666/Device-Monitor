@@ -7,7 +7,7 @@ using System.Threading.Tasks; // Needed for async/await
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations; // For ILogger
 using LoginWeb.DTOs;
-
+using Microsoft.AspNetCore.SignalR;
 namespace LoginWeb.Controllers
 {
     [ApiController]
@@ -40,6 +40,7 @@ namespace LoginWeb.Controllers
                     {
                         lastCheckTimestampUtc = DateTime.SpecifyKind(d.LastCheckTimestamp.Value, DateTimeKind.Utc);
                     }
+                    var latestHistory = d.Histories.FirstOrDefault();
 
                     return new
                     {
@@ -48,7 +49,6 @@ namespace LoginWeb.Controllers
                         IpAddress = d.IPAddress,
                         d.Port,
                         d.IsEnabled,
-                        d.LastStatus,
                         LastCheckTimestamp = lastCheckTimestampUtc, // Use the kind-specified version
                         d.OSVersion,
                         d.CommunityString,
@@ -65,29 +65,13 @@ namespace LoginWeb.Controllers
                         LatestDiskUsagePercentage = d.Histories.FirstOrDefault()?.DiskUsagePercentage,
                         // Health status from Device model for API
                         HealthStatus = d.HealthStatus.ToString(), 
-                        HealthStatusReason = d.HealthStatusReason,
                         LatestCpuLoadPercentage = d.Histories.FirstOrDefault()?.CpuLoadPercentage,
-
+                        // Provide sensible defaults if history doesn't exist yet
+                        LastStatus = latestHistory != null ? d.LastStatus : "Pending",
+                        HealthStatusReason = latestHistory != null ? d.HealthStatusReason : "This device has not been polled yet.",
                     };
                 }).ToList();
 
-
-                if (devicesData.Any())
-                {
-                    var firstDeviceForLog = devicesData.First();
-                    var timestampPropertyInfo = firstDeviceForLog.GetType().GetProperty("LastCheckTimestamp");
-                    if (timestampPropertyInfo != null)
-                    {
-                        var timestampValue = timestampPropertyInfo.GetValue(firstDeviceForLog) as DateTime?;
-                        if (timestampValue.HasValue)
-                        {
-                            _logger.LogInformation("CONTROLLER - Sending Device '{DeviceName}', LastCheckTimestamp: {TimestampValueString}, Kind: {TimestampKind}",
-                                firstDeviceForLog.GetType().GetProperty("Name")?.GetValue(firstDeviceForLog),
-                                timestampValue.Value.ToString("o"),
-                                timestampValue.Value.Kind);
-                        }
-                    }
-                }
                 return Ok(devicesData);
             }
             catch (Exception ex)
@@ -138,9 +122,10 @@ namespace LoginWeb.Controllers
                     LastStatus = "Unknown", 
                     LastCheckTimestamp = null, 
                     LastErrorTimestamp = null,
-                    LastErrorMessage = null
+                    LastErrorMessage = null,
 
-                    
+                    HealthStatus = DeviceHealth.Unknown,
+                    HealthStatusReason = "This device has not been polled yet."
                 };
                 _context.Devices.Add(newDevice);
                 await _context.SaveChangesAsync();
@@ -235,9 +220,8 @@ namespace LoginWeb.Controllers
 
         // --- REMOVED EncryptionService ---
         // The EncryptionService inner class is removed as it's no longer needed
-        // for the SNMPv2c CommunityString approach. If you implement encryption
-        // at rest for CommunityString later, use ASP.NET Core Data Protection
-        // or a similar standard mechanism, likely injected as a service.
+        // for the SNMPv2c CommunityString approach.
 
     }
+
 }
