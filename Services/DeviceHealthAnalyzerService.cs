@@ -2,7 +2,6 @@
 using LoginWeb.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.SignalR;
 public class DeviceHealthAnalyzerService : BackgroundService
 {
     private readonly ILogger<DeviceHealthAnalyzerService> _logger;
