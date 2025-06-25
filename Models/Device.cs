@@ -49,8 +49,11 @@ namespace LoginWeb.Models
 
         [Required]
         [StringLength(100)]
-        public string CommunityString { get; set; } 
-
+        public string CommunityString { get; set; }
+        public int? RamStorageIndex { get; set; } // To store the discovered index for Physical Memory
+        public int? DiskCStorageIndex { get; set; } // To store the discovered index for the C: drive
+        public int? DiskDStorageIndex { get; set; }
+        public int? DiskEStorageIndex { get; set; }
         public virtual ICollection<DeviceHistory> Histories { get; set; } = new List<DeviceHistory>();
 
         //public string Username { get; set; }

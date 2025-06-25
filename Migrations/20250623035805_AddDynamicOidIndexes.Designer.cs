@@ -4,6 +4,7 @@ using LoginWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LoginWeb.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250623035805_AddDynamicOidIndexes")]
+    partial class AddDynamicOidIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,12 +39,6 @@ namespace LoginWeb.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("DiskCStorageIndex")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("DiskDStorageIndex")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("DiskEStorageIndex")
                         .HasColumnType("int");
 
                     b.Property<int>("HealthStatus")
@@ -110,14 +107,8 @@ namespace LoginWeb.Migrations
                     b.Property<int>("DeviceId")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("DiskCUsagePercentage")
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<decimal?>("DiskDUsagePercentage")
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<decimal?>("DiskEUsagePercentage")
-                        .HasColumnType("decimal(5, 2)");
+                    b.Property<decimal?>("DiskUsagePercentage")
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<int>("HealthStatus")
                         .HasColumnType("int");
@@ -138,25 +129,13 @@ namespace LoginWeb.Migrations
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("TotalDiskCKBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<long?>("TotalDiskDKBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<long?>("TotalDiskEKBytes")
+                    b.Property<long?>("TotalDisk")
                         .HasColumnType("bigint");
 
                     b.Property<long?>("TotalRam")
                         .HasColumnType("bigint");
 
-                    b.Property<long?>("UsedDiskCKBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<long?>("UsedDiskDKBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<long?>("UsedDiskEKBytes")
+                    b.Property<long?>("UsedDiskKBytes")
                         .HasColumnType("bigint");
 
                     b.Property<long?>("UsedRamKBytes")

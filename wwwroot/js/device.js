@@ -177,13 +177,47 @@ function displayDeviceDetails(deviceId) {
     ramBar.innerText = `${ramPercent.toFixed(2)}%`;
     document.getElementById("details-ram-label").innerText = formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage);
 
-    // Disk
-    const diskBar = document.getElementById("details-disk-bar");
-    const diskPercent = device.latestDiskUsagePercentage || 0;
-    diskBar.style.width = `${diskPercent.toFixed(2)}%`;
-    diskBar.setAttribute('aria-valuenow', diskPercent.toFixed(2));
-    diskBar.innerText = `${diskPercent.toFixed(2)}%`;
-    document.getElementById("details-disk-label").innerText = formatStorageJS(device.latestUsedDiskKBytes, device.latestTotalDiskKBytes, device.latestDiskUsagePercentage);
+    // Handle Disk C
+    const diskCBar = document.getElementById('details-disk-c-bar');
+    const diskCLabel = document.getElementById('details-disk-c-label');
+    if (device.latestDiskCUsagePercentage != null) {
+        const percent = device.latestDiskCUsagePercentage;
+        diskCBar.style.width = `${percent.toFixed(2)}%`;
+        diskCBar.textContent = `${percent.toFixed(2)}%`;
+        diskCLabel.textContent = formatStorageJS(device.latestUsedDiskCKBytes, device.latestTotalDiskCKBytes, percent);
+    } else {
+        diskCBar.style.width = '0%';
+        diskCBar.textContent = 'N/A';
+        diskCLabel.textContent = 'N/A';
+    }
+
+    // Handle Disk D
+    const diskDBar = document.getElementById('details-disk-d-bar');
+    const diskDLabel = document.getElementById('details-disk-d-label');
+    if (device.latestDiskDUsagePercentage != null) {
+        const percent = device.latestDiskDUsagePercentage;
+        diskDBar.style.width = `${percent.toFixed(2)}%`;
+        diskDBar.textContent = `${percent.toFixed(2)}%`;
+        diskDLabel.textContent = formatStorageJS(device.latestUsedDiskDKBytes, device.latestTotalDiskDKBytes, percent);
+    } else {
+        diskDBar.style.width = '0%';
+        diskDBar.textContent = 'N/A';
+        diskDLabel.textContent = 'N/A';
+    }
+
+    // Handle Disk E
+    const diskEBar = document.getElementById('details-disk-e-bar');
+    const diskELabel = document.getElementById('details-disk-e-label');
+    if (device.latestDiskEUsagePercentage != null) {
+        const percent = device.latestDiskEUsagePercentage;
+        diskEBar.style.width = `${percent.toFixed(2)}%`;
+        diskEBar.textContent = `${percent.toFixed(2)}%`;
+        diskELabel.textContent = formatStorageJS(device.latestUsedDiskEKBytes, device.latestTotalDiskEKBytes, percent);
+    } else {
+        diskEBar.style.width = '0%';
+        diskEBar.textContent = 'N/A';
+        diskELabel.textContent = 'N/A';
+    }
 
     // --- Update Generate Report Button ---
     const reportButton = document.getElementById('generate-device-summary-button');
@@ -282,8 +316,6 @@ function createDeviceRow(device) {
 
     row.innerHTML = `
     <td data-label="Name">${device.name}</td>
-    <td data-label="IP Address">${device.ipAddress}</td>
-    <td data-label="Port">${device.port}</td>
     <td data-label="Active">${device.isEnabled ? 'Enabled' : 'Disabled'}</td>
     <td data-label="Polling">${device.lastStatus || "Unknown"}</td>
     <td data-label="Health Status">
@@ -294,7 +326,9 @@ function createDeviceRow(device) {
     </td>
     <td data-label="CPU">${formatCpuJS(device.latestCpuLoadPercentage)}</td>
     <td data-label="RAM">${formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage)}</td>
-    <td data-label="Disk C">${formatStorageJS(device.latestUsedDiskKBytes, device.latestTotalDiskKBytes, device.latestDiskUsagePercentage)}</td>
+    <td data-label="Disk C">${formatStorageJS(device.latestUsedDiskCKBytes, device.latestTotalDiskCKBytes, device.latestDiskCUsagePercentage)}</td>
+    <td data-label="Disk D">${formatStorageJS(device.latestUsedDiskDKBytes, device.latestTotalDiskDKBytes, device.latestDiskDUsagePercentage)}</td>
+    <td data-label="Disk E">${formatStorageJS(device.latestUsedDiskEKBytes, device.latestTotalDiskEKBytes, device.latestDiskEUsagePercentage)}</td>
     <td data-label="Uptime" class="col-uptime">${formatUptimeJS(device.latestSysUpTimeSeconds)}</td>
     <td data-label="Last Check" class="col-last-check">${lastCheckDisplay}</td>
     `;

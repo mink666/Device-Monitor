@@ -54,18 +54,31 @@ namespace LoginWeb.Controllers
                         d.CommunityString,
                         d.PollingIntervalSeconds,
                         LatestSysUpTimeSeconds = d.Histories.FirstOrDefault()?.SysUpTimeSeconds,
+
                         // RAM Metrics - Direct Mapping from latestHistory
                         LatestTotalRamKBytes = d.Histories.FirstOrDefault()?.TotalRam,
                         LatestUsedRamKBytes = d.Histories.FirstOrDefault()?.UsedRamKBytes,
                         LatestMemoryUsagePercentage = d.Histories.FirstOrDefault()?.MemoryUsagePercentage,
 
-                        // Disk Metrics - Direct Mapping from latestHistory
-                        LatestTotalDiskKBytes = d.Histories.FirstOrDefault()?.TotalDisk,
-                        LatestUsedDiskKBytes = d.Histories.FirstOrDefault()?.UsedDiskKBytes, 
-                        LatestDiskUsagePercentage = d.Histories.FirstOrDefault()?.DiskUsagePercentage,
+                        // Disk C
+                        LatestTotalDiskCKBytes = d.Histories.FirstOrDefault()?.TotalDiskCKBytes,
+                        LatestUsedDiskCKBytes = d.Histories.FirstOrDefault()?.UsedDiskCKBytes,
+                        LatestDiskCUsagePercentage = d.Histories.FirstOrDefault()?.DiskCUsagePercentage,
+
+                        // Disk D
+                        LatestTotalDiskDKBytes = d.Histories.FirstOrDefault()?.TotalDiskDKBytes,
+                        LatestUsedDiskDKBytes = d.Histories.FirstOrDefault()?.UsedDiskDKBytes,
+                        LatestDiskDUsagePercentage = d.Histories.FirstOrDefault()?.DiskDUsagePercentage,
+
+                        // Disk E
+                        LatestTotalDiskEKBytes = d.Histories.FirstOrDefault()?.TotalDiskEKBytes,
+                        LatestUsedDiskEKBytes = d.Histories.FirstOrDefault()?.UsedDiskEKBytes,
+                        LatestDiskEUsagePercentage = d.Histories.FirstOrDefault()?.DiskEUsagePercentage,
+
                         // Health status from Device model for API
                         HealthStatus = d.HealthStatus.ToString(), 
                         LatestCpuLoadPercentage = d.Histories.FirstOrDefault()?.CpuLoadPercentage,
+
                         // Provide sensible defaults if history doesn't exist yet
                         LastStatus = latestHistory != null ? d.LastStatus : "Pending",
                         HealthStatusReason = latestHistory != null ? d.HealthStatusReason : "This device has not been polled yet.",

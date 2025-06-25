@@ -24,12 +24,21 @@ namespace LoginWeb.ViewModels // Or LoginWeb.Models if you prefer
         // RAM Metrics
         public long? LatestTotalRamKBytes { get; set; }      
         public long? LatestUsedRamKBytes { get; set; }        
-        public decimal? LatestMemoryUsagePercentage { get; set; } 
+        public decimal? LatestMemoryUsagePercentage { get; set; }
 
         // Disk C Metrics 
-        public long? LatestTotalDiskKBytes { get; set; }     
-        public long? LatestUsedDiskKBytes { get; set; }      
-        public decimal? LatestDiskUsagePercentage { get; set; }
+        public long? LatestTotalDiskCKBytes { get; set; }
+        public long? LatestUsedDiskCKBytes { get; set; }
+        public decimal? LatestDiskCUsagePercentage { get; set; }
+        // --- Disk D Metrics (New) ---
+        public long? LatestTotalDiskDKBytes { get; set; }
+        public long? LatestUsedDiskDKBytes { get; set; }
+        public decimal? LatestDiskDUsagePercentage { get; set; }
+
+        // --- Disk E Metrics (New) ---
+        public long? LatestTotalDiskEKBytes { get; set; }
+        public long? LatestUsedDiskEKBytes { get; set; }
+        public decimal? LatestDiskEUsagePercentage { get; set; }
         public decimal? LatestCpuLoadPercentage { get; set; }
         // Health Status 
         public Models.DeviceHealth HealthStatus { get; set; }

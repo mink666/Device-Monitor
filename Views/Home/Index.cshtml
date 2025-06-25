@@ -77,13 +77,27 @@
                         <div id="details-ram-label" class="text-center text-muted small mt-1">N/A</div>
                     </div>
                     <div class="mt-3">
-                        <strong>Disk Usage</strong>
+                        <strong>Disk C Usage</strong>
                         <div class="progress" style="height: 25px;">
-                            <div id="details-disk-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            <div id="details-disk-c-bar" class="progress-bar bg-info" role="progressbar"></div>
                         </div>
-                        <div id="details-disk-label" class="text-center text-muted small mt-1">N/A</div>
+                        <div id="details-disk-c-label" class="text-center text-muted small mt-1">N/A</div>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Disk D Usage</strong>
+                        <div class="progress" style="height: 25px;">
+                            <div id="details-disk-d-bar" class="progress-bar bg-info" role="progressbar"></div>
+                        </div>
+                        <div id="details-disk-d-label" class="text-center text-muted small mt-1">N/A</div>
                     </div>
 
+                    <div class="mt-3">
+                        <strong>Disk E Usage</strong>
+                        <div class="progress" style="height: 25px;">
+                            <div id="details-disk-e-bar" class="progress-bar bg-info" role="progressbar"></div>
+                        </div>
+                        <div id="details-disk-e-label" class="text-center text-muted small mt-1">N/A</div>
+                    </div>
                     <hr />
                     <div class="text-end">
                         <button id="generate-device-summary-button" class="btn btn-dark">Generate Device Summary</button>
@@ -102,16 +116,16 @@
         <thead>
             <tr class="table-active">
                 <th>Name</th>
-                <th>IP Address</th>
-                <th>Port</th>
                 <th>Active</th>
                 <th>Polling</th>
                 <th>Health Status</th>
                 <th>CPU</th>
                 <th>RAM</th>
-                <th>Disk C</th>
-                <th>Uptime</th>
-                <th>Last Check</th>
+                <th class="col-disk">Disk C</th>
+                <th class="col-disk">Disk D</th>
+                <th class="col-disk">Disk E</th>
+                <th class="col-uptime">Uptime</th>
+                <th class="col-last-check">Last Check</th>
             </tr>
         </thead>
         <tbody id="deviceList">
