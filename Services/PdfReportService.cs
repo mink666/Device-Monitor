@@ -107,6 +107,8 @@ public class PdfReportService
                                 columns.RelativeColumn(1.5f);  // CPU %
                                 columns.RelativeColumn(3);     // RAM
                                 columns.RelativeColumn(3);     // Disk C
+                                columns.RelativeColumn(1.5f);  // Disk D %
+                                columns.RelativeColumn(1.5f);  // Disk E %
                                 columns.RelativeColumn(1.5f);  // Uptime
                                 columns.RelativeColumn(2);     // Last Check
                             });
@@ -124,6 +126,8 @@ public class PdfReportService
                                 HeaderCell("CPU");
                                 HeaderCell("RAM");
                                 HeaderCell("Disk C");
+                                HeaderCell("Disk D");
+                                HeaderCell("Disk E");
                                 HeaderCell("Uptime");
                                 HeaderCell("Last Check");
                             });
@@ -139,7 +143,9 @@ public class PdfReportService
                                 DataCell(device.HealthStatus.ToString()); 
                                 DataCell(device.LatestCpuLoadPercentage.HasValue ? $"{device.LatestCpuLoadPercentage:F2}%" : "N/A");
                                 DataCell(FormatStorage(device.LatestUsedRamKBytes, device.LatestTotalRamKBytes, device.LatestMemoryUsagePercentage));
-                                DataCell(FormatStorage(device.LatestUsedDiskKBytes, device.LatestTotalDiskKBytes, device.LatestDiskUsagePercentage));
+                                DataCell(device.LatestDiskCUsagePercentage.HasValue ? $"{device.LatestDiskCUsagePercentage:F2}%" : "N/A");
+                                DataCell(device.LatestDiskDUsagePercentage.HasValue ? $"{device.LatestDiskDUsagePercentage:F2}%" : "N/A");
+                                DataCell(device.LatestDiskEUsagePercentage.HasValue ? $"{device.LatestDiskEUsagePercentage:F2}%" : "N/A");
                                 DataCell(FormatUptime(device.LatestSysUpTimeSeconds, device.LastStatus));
                                 DataCell(device.LastCheckTimestamp?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A");
                             }
@@ -258,7 +264,7 @@ public class PdfReportService
                         DataCell(history.HealthStatusReason ?? "N/A");
                         DataCell(history.CpuLoadPercentage.HasValue ? $"{history.CpuLoadPercentage:F2}%" : "N/A");
                         DataCell(FormatStorage(history.UsedRamKBytes, history.TotalRam, history.MemoryUsagePercentage));
-                        DataCell(FormatStorage(history.UsedDiskKBytes, history.TotalDisk, history.DiskUsagePercentage));
+                        DataCell(FormatStorage(history.UsedDiskCKBytes, history.TotalDiskCKBytes, history.DiskCUsagePercentage));
                     }
                 });
 

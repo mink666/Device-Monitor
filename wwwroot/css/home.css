@@ -117,7 +117,12 @@
 
     .col-uptime {
         /* Sets a fixed width for the Uptime column on desktop */
-        width: 150px;
+        width: 130px;
+    }
+
+    /* Give all disk columns an equal, fixed width */
+    .col-disk {
+        width: 130px;
     }
 }
 

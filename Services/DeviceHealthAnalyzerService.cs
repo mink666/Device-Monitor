@@ -92,11 +92,18 @@ public class DeviceHealthAnalyzerService : BackgroundService
                     {
                         newWarningReason = $"High Memory Usage: {latestHistory.MemoryUsagePercentage:F2}% (Threshold: >{RamWarningThreshold}%)";
                     }
-                    else if (latestHistory.DiskUsagePercentage.HasValue && latestHistory.DiskUsagePercentage > DiskWarningThreshold)
+                    else if (latestHistory.DiskCUsagePercentage.HasValue && latestHistory.DiskCUsagePercentage > DiskWarningThreshold)
                     {
-                        newWarningReason = $"High Disk Usage: {latestHistory.DiskUsagePercentage:F2}% (Threshold: >{DiskWarningThreshold}%)";
+                        newWarningReason = $"High Disk C Usage: {latestHistory.DiskCUsagePercentage:F2}% (Threshold: >{DiskWarningThreshold}%)";
                     }
-                    // You can add more 'else if' checks here for data spikes later.
+                    else if (latestHistory.DiskDUsagePercentage.HasValue && latestHistory.DiskDUsagePercentage > DiskWarningThreshold)
+                    {
+                        newWarningReason = $"High Disk D Usage: {latestHistory.DiskDUsagePercentage:F2}% (Threshold: >{DiskWarningThreshold}%)";
+                    }
+                    else if (latestHistory.DiskEUsagePercentage.HasValue && latestHistory.DiskEUsagePercentage > DiskWarningThreshold)
+                    {
+                        newWarningReason = $"High Disk E Usage: {latestHistory.DiskEUsagePercentage:F2}% (Threshold: >{DiskWarningThreshold}%)";
+                    }
                 }
 
                 // --- UPDATE DEVICE HEALTH STATUS ---

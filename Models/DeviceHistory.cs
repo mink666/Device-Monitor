@@ -30,13 +30,8 @@ namespace LoginWeb.Models
         [Column(TypeName = "decimal(5, 2)")]
         public decimal? MemoryUsagePercentage { get; set; }
 
-        [Column(TypeName = "decimal(5,2)")]
-        public decimal? DiskUsagePercentage { get; set; }
-
         public long? TotalRam{ get; set; } 
-        public long? TotalDisk { get; set; }
         public long? UsedRamKBytes { get; set; }
-        public long? UsedDiskKBytes { get; set; }
 
         [StringLength(50)]
         public string? PollingStatus { get; set; } // e.g., "Online", "SNMP Error", "Ping Failed"
@@ -44,5 +39,23 @@ namespace LoginWeb.Models
         public DeviceHealth HealthStatus { get; set; } // The health status at the time of polling
 
         public string? HealthStatusReason { get; set; } // The reason at the time of polling
+
+        // Disk C Metrics (Renamed from old properties)
+        public long? TotalDiskCKBytes { get; set; }
+        public long? UsedDiskCKBytes { get; set; }
+        [Column(TypeName = "decimal(5, 2)")]
+        public decimal? DiskCUsagePercentage { get; set; }
+
+        // Disk D Metrics
+        public long? TotalDiskDKBytes { get; set; }
+        public long? UsedDiskDKBytes { get; set; }
+        [Column(TypeName = "decimal(5, 2)")]
+        public decimal? DiskDUsagePercentage { get; set; }
+
+        // Disk E Metrics
+        public long? TotalDiskEKBytes { get; set; }
+        public long? UsedDiskEKBytes { get; set; }
+        [Column(TypeName = "decimal(5, 2)")]
+        public decimal? DiskEUsagePercentage { get; set; }
     }
 }

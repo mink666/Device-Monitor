@@ -60,18 +60,44 @@ public class HomeController : Controller
                                        .Select(h => h.MemoryUsagePercentage)
                                        .FirstOrDefault(),
 
-                    // Disk Metrics
-                    LatestTotalDiskKBytes = d.Histories
+                    // Disk C Metrics
+                    LatestTotalDiskCKBytes = d.Histories
                                        .OrderByDescending(h => h.Timestamp)
-                                       .Select(h => h.TotalDisk)
+                                       .Select(h => h.TotalDiskCKBytes)
                                        .FirstOrDefault(),
-                    LatestUsedDiskKBytes = d.Histories
+                    LatestUsedDiskCKBytes = d.Histories
                                        .OrderByDescending(h => h.Timestamp)
-                                       .Select(h => h.UsedDiskKBytes) 
+                                       .Select(h => h.UsedDiskCKBytes) 
                                        .FirstOrDefault(),
-                    LatestDiskUsagePercentage = d.Histories
+                    LatestDiskCUsagePercentage = d.Histories
                                        .OrderByDescending(h => h.Timestamp)
-                                       .Select(h => h.DiskUsagePercentage)
+                                       .Select(h => h.DiskCUsagePercentage)
+                                       .FirstOrDefault(),
+                    // Disk D Metrics
+                    LatestTotalDiskDKBytes = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.TotalDiskCKBytes)
+                                       .FirstOrDefault(),
+                    LatestUsedDiskDKBytes = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.UsedDiskCKBytes)
+                                       .FirstOrDefault(),
+                    LatestDiskDUsagePercentage = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.DiskCUsagePercentage)
+                                       .FirstOrDefault(),
+                    // Disk E Metrics
+                    LatestTotalDiskEKBytes = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.TotalDiskCKBytes)
+                                       .FirstOrDefault(),
+                    LatestUsedDiskEKBytes = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.UsedDiskCKBytes)
+                                       .FirstOrDefault(),
+                    LatestDiskEUsagePercentage = d.Histories
+                                       .OrderByDescending(h => h.Timestamp)
+                                       .Select(h => h.DiskCUsagePercentage)
                                        .FirstOrDefault(),
                     LatestCpuLoadPercentage = d.Histories
                                        .OrderByDescending(h => h.Timestamp)

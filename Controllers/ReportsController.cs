@@ -52,9 +52,19 @@ public class ReportsController : Controller
                 LatestUsedRamKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.UsedRamKBytes).FirstOrDefault(),
                 LatestTotalRamKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.TotalRam).FirstOrDefault(),
                 LatestMemoryUsagePercentage = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.MemoryUsagePercentage).FirstOrDefault(),
-                LatestUsedDiskKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.UsedDiskKBytes).FirstOrDefault(),
-                LatestTotalDiskKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.TotalDisk).FirstOrDefault(),
-                LatestDiskUsagePercentage = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.DiskUsagePercentage).FirstOrDefault(),
+
+                LatestUsedDiskCKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.UsedDiskCKBytes).FirstOrDefault(),
+                LatestTotalDiskCKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.TotalDiskCKBytes).FirstOrDefault(),
+                LatestDiskCUsagePercentage = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.DiskCUsagePercentage).FirstOrDefault(),
+
+                LatestUsedDiskDKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.UsedDiskCKBytes).FirstOrDefault(),
+                LatestTotalDiskDKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.TotalDiskCKBytes).FirstOrDefault(),
+                LatestDiskDUsagePercentage = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.DiskCUsagePercentage).FirstOrDefault(),
+
+                LatestUsedDiskEKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.UsedDiskCKBytes).FirstOrDefault(),
+                LatestTotalDiskEKBytes = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.TotalDiskCKBytes).FirstOrDefault(),
+                LatestDiskEUsagePercentage = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.DiskCUsagePercentage).FirstOrDefault(),
+
                 LatestCpuLoadPercentage = d.Histories.OrderByDescending(h => h.Timestamp).Select(h => h.CpuLoadPercentage).FirstOrDefault()
             })
             .ToListAsync();
