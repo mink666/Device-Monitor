@@ -304,6 +304,9 @@ function createDeviceRow(device) {
     //Health status attributes
     row.setAttribute("data-health-status", device.healthStatus || "Unknown");
     row.setAttribute("data-health-reason", device.healthStatusReason || "");
+    row.setAttribute("data-cpuwarningthreshold", device.cpuWarningThreshold || "");
+    row.setAttribute("data-ramwarningthreshold", device.ramWarningThreshold || "");
+    row.setAttribute("data-diskwarningthreshold", device.diskWarningThreshold || "");
 
     row.className = getRowClassForHealthJS(device.healthStatus);
 
@@ -381,6 +384,12 @@ async function fetchAndRenderDevices() {
 document.addEventListener("DOMContentLoaded", function () {
 
     fetchAndRenderDevices(); // Load devices when the page is ready
+    const autoRefreshInterval = 60000; // 60,000 milliseconds = 60 seconds
+
+    setInterval(() => {
+        fetchAndRenderDevices();
+    }, autoRefreshInterval);
+
     const searchInput = document.getElementById('deviceSearchInput');
     if (searchInput) {
         searchInput.addEventListener('input', () => {
@@ -503,6 +512,10 @@ document.addEventListener("DOMContentLoaded", function () {
             e.preventDefault();
 
             const id = document.getElementById("editDeviceId").value.trim();
+            const cpuThresholdInput = document.getElementById("editCpuThreshold").value;
+            const ramThresholdInput = document.getElementById("editRamThreshold").value;
+            const diskThresholdInput = document.getElementById("editDiskThreshold").value;
+
             const deviceDto = { // This object MUST match your DeviceEditDto on the server
                 Name: document.getElementById("editDeviceName").value.trim(),
                 IPAddress: document.getElementById("editDeviceIP").value.trim(), 
@@ -510,6 +523,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 CommunityString: document.getElementById("editDeviceCommunity").value.trim(), 
                 IsEnabled: document.getElementById("editDeviceIsEnabled").value === 'true', // Convert select value to boolean
                 PollingIntervalSeconds: Number(document.getElementById("editDevicePollingInterval").value),
+                CpuWarningThreshold: cpuThresholdInput ? Number(cpuThresholdInput) : null,
+                RamWarningThreshold: ramThresholdInput ? Number(ramThresholdInput) : null,
+                DiskWarningThreshold: diskThresholdInput ? Number(diskThresholdInput) : null,
             };
 
             if (!deviceDto.IPAddress || !deviceDto.Port || !deviceDto.CommunityString) {
@@ -555,6 +571,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.getElementById('editDeviceCommunity').value = selectedRow.dataset.community || '';
                 document.getElementById('editDeviceIsEnabled').value = selectedRow.dataset.isenabled || 'true'; 
                 document.getElementById('editDevicePollingInterval').value = selectedRow.dataset.pollinginterval || '';
+                document.getElementById('editCpuThreshold').value = selectedRow.dataset.cpuwarningthreshold || '';
+                document.getElementById('editRamThreshold').value = selectedRow.dataset.ramwarningthreshold || '';
+                document.getElementById('editDiskThreshold').value = selectedRow.dataset.diskwarningthreshold || '';
             }
         });
     }

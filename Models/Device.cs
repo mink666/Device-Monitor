@@ -54,6 +54,15 @@ namespace LoginWeb.Models
         public int? DiskCStorageIndex { get; set; } // To store the discovered index for the C: drive
         public int? DiskDStorageIndex { get; set; }
         public int? DiskEStorageIndex { get; set; }
+
+        [Column(TypeName = "decimal(5, 2)")]
+        public decimal? CpuWarningThreshold { get; set; }
+
+        [Column(TypeName = "decimal(5, 2)")]
+        public decimal? RamWarningThreshold { get; set; }
+
+        [Column(TypeName = "decimal(5, 2)")]
+        public decimal? DiskWarningThreshold { get; set; }
         public virtual ICollection<DeviceHistory> Histories { get; set; } = new List<DeviceHistory>();
 
         //public string Username { get; set; }
