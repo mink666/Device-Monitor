@@ -11,5 +11,8 @@ namespace LoginWeb.DTOs
         public bool IsEnabled { get; set; } = true;
         public int PollingIntervalSeconds { get; set; }
         public string? OSVersion { get; set; }
+        public decimal? CpuWarningThreshold { get; set; }
+        public decimal? RamWarningThreshold { get; set; }
+        public decimal? DiskWarningThreshold { get; set; }
     }
 }

@@ -6,12 +6,12 @@ public class DeviceHealthAnalyzerService : BackgroundService
 {
     private readonly ILogger<DeviceHealthAnalyzerService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly TimeSpan _analysisInterval = TimeSpan.FromMinutes(5); 
+    private readonly TimeSpan _analysisInterval = TimeSpan.FromMinutes(5);
 
     // THRESHOLDS 
-    private const decimal CpuWarningThreshold = 80.0m; 
-    private const decimal RamWarningThreshold = 85.0m; 
-    private const decimal DiskWarningThreshold = 80.0m; 
+    private const decimal CpuWarningThreshold = 80.0m;
+    private const decimal RamWarningThreshold = 80.0m;
+    private const decimal DiskWarningThreshold = 80.0m;
     private const int StaleDataThresholdMinutes = 15; 
 
     public DeviceHealthAnalyzerService(ILogger<DeviceHealthAnalyzerService> logger, IServiceScopeFactory scopeFactory)
@@ -84,25 +84,29 @@ public class DeviceHealthAnalyzerService : BackgroundService
                 // This check only runs if the first check didn't find an issue and we have history.
                 else if (latestHistory != null)
                 {
-                    if (latestHistory.CpuLoadPercentage.HasValue && latestHistory.CpuLoadPercentage > CpuWarningThreshold)
+                    var cpuThreshold = device.CpuWarningThreshold ?? CpuWarningThreshold;
+                    var ramThreshold = device.RamWarningThreshold ?? RamWarningThreshold;
+                    var diskThreshold = device.DiskWarningThreshold ?? DiskWarningThreshold;
+
+                    if (latestHistory.CpuLoadPercentage.HasValue && latestHistory.CpuLoadPercentage > cpuThreshold)
                     {
-                        newWarningReason = $"High CPU Usage: {latestHistory.CpuLoadPercentage:F2}% (Threshold: >{CpuWarningThreshold}%)";
+                        newWarningReason = $"High CPU Usage: {latestHistory.CpuLoadPercentage:F2}% (Threshold: >{cpuThreshold}%)";
                     }
-                    else if (latestHistory.MemoryUsagePercentage.HasValue && latestHistory.MemoryUsagePercentage > RamWarningThreshold)
+                    else if (latestHistory.MemoryUsagePercentage.HasValue && latestHistory.MemoryUsagePercentage > ramThreshold)
                     {
-                        newWarningReason = $"High Memory Usage: {latestHistory.MemoryUsagePercentage:F2}% (Threshold: >{RamWarningThreshold}%)";
+                        newWarningReason = $"High Memory Usage: {latestHistory.MemoryUsagePercentage:F2}% (Threshold: >{ramThreshold}%)";
                     }
-                    else if (latestHistory.DiskCUsagePercentage.HasValue && latestHistory.DiskCUsagePercentage > DiskWarningThreshold)
+                    else if (latestHistory.DiskCUsagePercentage.HasValue && latestHistory.DiskCUsagePercentage > diskThreshold)
                     {
-                        newWarningReason = $"High Disk C Usage: {latestHistory.DiskCUsagePercentage:F2}% (Threshold: >{DiskWarningThreshold}%)";
+                        newWarningReason = $"High Disk C Usage: {latestHistory.DiskCUsagePercentage:F2}% (Threshold: >{diskThreshold}%)";
                     }
-                    else if (latestHistory.DiskDUsagePercentage.HasValue && latestHistory.DiskDUsagePercentage > DiskWarningThreshold)
+                    else if (latestHistory.DiskDUsagePercentage.HasValue && latestHistory.DiskDUsagePercentage > diskThreshold)
                     {
-                        newWarningReason = $"High Disk D Usage: {latestHistory.DiskDUsagePercentage:F2}% (Threshold: >{DiskWarningThreshold}%)";
+                        newWarningReason = $"High Disk D Usage: {latestHistory.DiskDUsagePercentage:F2}% (Threshold: >{diskThreshold}%)";
                     }
-                    else if (latestHistory.DiskEUsagePercentage.HasValue && latestHistory.DiskEUsagePercentage > DiskWarningThreshold)
+                    else if (latestHistory.DiskEUsagePercentage.HasValue && latestHistory.DiskEUsagePercentage > diskThreshold)
                     {
-                        newWarningReason = $"High Disk E Usage: {latestHistory.DiskEUsagePercentage:F2}% (Threshold: >{DiskWarningThreshold}%)";
+                        newWarningReason = $"High Disk E Usage: {latestHistory.DiskEUsagePercentage:F2}% (Threshold: >{diskThreshold}%)";
                     }
                 }
 

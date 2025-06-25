@@ -173,6 +173,9 @@ namespace LoginWeb.Controllers
             device.IsEnabled = dto.IsEnabled;
             device.PollingIntervalSeconds = dto.PollingIntervalSeconds;
             device.OSVersion = dto.OSVersion;
+            device.CpuWarningThreshold = dto.CpuWarningThreshold;
+            device.RamWarningThreshold = dto.RamWarningThreshold;
+            device.DiskWarningThreshold = dto.DiskWarningThreshold;
 
             _context.Entry(device).State = EntityState.Modified;
 
