@@ -114,6 +114,6 @@ dotnet run
 The application seeds a default administrator account upon first run if no other admin exists.
 
   * **Username:** `admin`
-  * **Password:** `Admin@123` (or as configured in your database seeding logic)
+  * **Password:** `123456789` (or as configured in your database seeding logic)
 
 It is highly recommended to log in and change the default password immediately. You can then begin adding devices to monitor.
