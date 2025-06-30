@@ -11,38 +11,37 @@ using Lextm.SharpSnmpLib.Messaging;
 using System.Net;
 using System.Collections.Generic;
 using System.Linq; 
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using LoginWeb.Services;
 
 public class SnmpPollingService : IHostedService, IDisposable
 {
     private readonly ILogger<SnmpPollingService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private Timer _timer;
-    private readonly TimeSpan _defaultPollingIntervalSeconds = TimeSpan.FromSeconds(15);
+    private readonly TimeSpan _pollingInterval = TimeSpan.FromMinutes(1);
+    private readonly IConfiguration _configuration;
 
+    //private const decimal CpuWarningThreshold = 80.0m;
+    //private const decimal RamWarningThreshold = 80.0m;
+    //private const decimal DiskWarningThreshold = 80.0m;
+    //private const int EmailAlertMinutes = 5;
 
     private static readonly ObjectIdentifier SysUpTimeOid = new ObjectIdentifier("1.3.6.1.2.1.1.3.0");
     private static readonly ObjectIdentifier SysDescrOid = new ObjectIdentifier("1.3.6.1.2.1.1.1.0");
     private static readonly ObjectIdentifier CpuLoadOid = new ObjectIdentifier("1.3.6.1.2.1.25.3.3.1.2.3");
 
-    //private static readonly ObjectIdentifier RamAllocUnitsOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.4.4");
-    //private static readonly ObjectIdentifier RamTotalSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.5.4");
-    //private static readonly ObjectIdentifier RamUsedSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.6.4");
-
-    //private static readonly ObjectIdentifier DiskCAllocUnitsOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.4.1");
-    //private static readonly ObjectIdentifier DiskCTotalSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.5.1");
-    //private static readonly ObjectIdentifier DiskCUsedSizeOid = new ObjectIdentifier("1.3.6.1.2.1.25.2.3.1.6.1");
-
-    public SnmpPollingService(ILogger<SnmpPollingService> logger, IServiceScopeFactory scopeFactory)
+    public SnmpPollingService(ILogger<SnmpPollingService> logger, IServiceScopeFactory scopeFactory, IConfiguration configuration)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _configuration = configuration;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("SNMP Polling Service starting at {time}.", DateTimeOffset.Now);
-        _timer = new Timer(DoWork, null, TimeSpan.Zero, _defaultPollingIntervalSeconds);
+        _timer = new Timer(DoWork, null, TimeSpan.Zero, _pollingInterval);
         return Task.CompletedTask;
     }
     private async void DoWork(object state)
@@ -52,9 +51,17 @@ public class SnmpPollingService : IHostedService, IDisposable
         using (var scope = _scopeFactory.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var devicesToPotentiallyPoll = await dbContext.Devices.Where(d => d.IsEnabled).ToListAsync();
+            var devicesToPoll = await dbContext.Devices.Where(d => d.IsEnabled).ToListAsync();
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
+            var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
+            var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
-            foreach (var device in devicesToPotentiallyPoll)
+            var globalCpuThreshold = _configuration.GetValue<decimal>("MonitoringSettings:DefaultCpuWarningThreshold", 80);
+            var globalRamThreshold = _configuration.GetValue<decimal>("MonitoringSettings:DefaultRamWarningThreshold", 85);
+            var globalDiskThreshold = _configuration.GetValue<decimal>("MonitoringSettings:DefaultDiskWarningThreshold", 80);
+            var emailAlertMinutes = _configuration.GetValue<int>("MonitoringSettings:EmailAlertWarningMinutes", 5);
+
+            foreach (var device in devicesToPoll)
             {
                 bool isDueForPoll = false;
                 if (!device.LastCheckTimestamp.HasValue)
@@ -193,8 +200,7 @@ public class SnmpPollingService : IHostedService, IDisposable
                                     case "DiskCUsedSize": diskCUsed = value; break;
                                     case "DiskDAllocUnits": diskDAlloc = value; break;
                                     case "DiskDTotalSize": diskDTotal = value; break;
-                                    case "DiskDUsedSize": diskDUsed = value; _logger.LogInformation("Received value for DiskDTotalSize: {Value}", value);
-                                        break;
+                                    case "DiskDUsedSize": diskDUsed = value; break;
                                     case "DiskEAllocUnits": diskEAlloc = value; break;
                                     case "DiskETotalSize": diskETotal = value; break;
                                     case "DiskEUsedSize": diskEUsed = value; break;
@@ -220,14 +226,10 @@ public class SnmpPollingService : IHostedService, IDisposable
                             historyEntry.UsedDiskCKBytes = usedDiskBytes / 1024;    // Use new property name
                             historyEntry.DiskCUsagePercentage = Math.Round(((decimal)usedDiskBytes / totalDiskBytes) * 100, 2);
                         }
-                        _logger.LogInformation("Preparing to calculate Disk D. HasValue Allocs: {hasAlloc}, Total: {hasTotal}, Used: {hasUsed}",
-    diskDAlloc.HasValue, diskDTotal.HasValue, diskDUsed.HasValue);
 
                         // Handle Disk D
                         if (diskDAlloc.HasValue && diskDTotal.HasValue && diskDUsed.HasValue && diskDTotal > 0 && diskDAlloc > 0)
                         {
-                            _logger.LogInformation("ALL VALUES PRESENT. Calculating and saving Disk D metrics.");
-
                             long totalDiskBytes = diskDTotal.Value * diskDAlloc.Value;
                             long usedDiskBytes = diskDUsed.Value * diskDAlloc.Value;
                             historyEntry.TotalDiskDKBytes = totalDiskBytes / 1024; // Use new property name
@@ -274,28 +276,78 @@ public class SnmpPollingService : IHostedService, IDisposable
                     device.LastStatus = "Error";
                     pollErrorMessage = $"An unexpected error occurred: {ex.Message}";
                 }
-                finally
+
+                device.LastCheckTimestamp = DateTime.UtcNow;
+
+                DeviceHealth newStatus;
+                string newReason = null;
+                var warningReasons = new List<string>();
+                if (pollSuccess)
                 {
-                    device.LastCheckTimestamp = DateTime.UtcNow;
-                    if (pollSuccess)
+                    var cpuThreshold = device.CpuWarningThreshold ?? globalCpuThreshold;
+                    if (historyEntry.CpuLoadPercentage > cpuThreshold) warningReasons.Add($"High CPU: {historyEntry.CpuLoadPercentage:F2}%");
+
+                    var ramThreshold = device.RamWarningThreshold ?? globalRamThreshold;
+                    if (historyEntry.MemoryUsagePercentage > ramThreshold) warningReasons.Add($"High RAM: {historyEntry.MemoryUsagePercentage:F2}%");
+
+                    var diskThreshold = device.DiskWarningThreshold ?? globalDiskThreshold;
+                    if (historyEntry.DiskCUsagePercentage > diskThreshold) warningReasons.Add($"High Disk C: {historyEntry.DiskCUsagePercentage:F2}%");
+                    if (historyEntry.DiskDUsagePercentage > diskThreshold) warningReasons.Add($"High Disk D: {historyEntry.DiskDUsagePercentage:F2}%");
+                    if (historyEntry.DiskEUsagePercentage > diskThreshold) warningReasons.Add($"High Disk E: {historyEntry.DiskEUsagePercentage:F2}%");
+
+                    if (warningReasons.Any())
                     {
-                        device.LastStatus = "Online";
-                        device.HealthStatus = DeviceHealth.Healthy;
-                        device.HealthStatusReason = "Device is online and responding normally.";
+                        newStatus = DeviceHealth.Warning;
+                        newReason = string.Join(", ", warningReasons);
                     }
                     else
                     {
-                        device.LastStatus = "Offline";
-                        device.HealthStatus = DeviceHealth.Unreachable;
-                        device.HealthStatusReason = pollErrorMessage ?? "Polling failed.";
+                        newStatus = DeviceHealth.Healthy;
+                        newReason = "Device is online and responding normally.";
                     }
-
-                    historyEntry.PollingStatus = device.LastStatus;
-                    historyEntry.HealthStatus = device.HealthStatus;
-                    historyEntry.HealthStatusReason = device.HealthStatusReason;
-                    dbContext.DeviceHistories.Add(historyEntry);
-                    await dbContext.SaveChangesAsync();
                 }
+                else
+                {
+                    newStatus = DeviceHealth.Unreachable;
+                    newReason = pollErrorMessage;
+                }
+                device.LastStatus = pollSuccess ? "Online" : "Offline";
+                device.HealthStatus = newStatus;
+                device.HealthStatusReason = newReason;
+
+                // Handle Web Notifications
+                if (newStatus == DeviceHealth.Warning)
+                {
+                    await hubContext.Clients.All.SendAsync("ReceiveWarning", device.Name, newReason);
+                }
+
+                // Handle Email Alert Logic
+                if (newStatus == DeviceHealth.Warning)
+                {
+                    if (!device.WarningStateTimestamp.HasValue)
+                    {
+                        device.WarningStateTimestamp = DateTime.UtcNow;
+                    }
+                    else if ((DateTime.UtcNow - device.WarningStateTimestamp.Value).TotalMinutes > emailAlertMinutes)
+                    {
+                        var recipient = configuration.GetValue<string>("EmailSettings:AlertRecipientEmail");
+                        if (!string.IsNullOrEmpty(recipient))
+                        {
+                            var subject = $"[Device Monitor] Persistent Warning: {device.Name}";
+                            await emailService.SendEmailAsync(recipient, subject, $"Reason: {newReason}");
+                        }
+                        device.WarningStateTimestamp = DateTime.UtcNow; // Reset timer to prevent spam
+                    }
+                }
+                else // If device is Healthy or Unreachable, clear the warning timer
+                {
+                    device.WarningStateTimestamp = null;
+                }
+                historyEntry.PollingStatus = device.LastStatus;
+                historyEntry.HealthStatus = newStatus;
+                historyEntry.HealthStatusReason = newReason;
+                dbContext.DeviceHistories.Add(historyEntry);
+                await dbContext.SaveChangesAsync();
             }
         }
     }

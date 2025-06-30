@@ -105,8 +105,8 @@ public class PdfReportService
                                 columns.RelativeColumn(1.5f);  // Polling Status
                                 columns.RelativeColumn(2);     // Health Status
                                 columns.RelativeColumn(1.5f);  // CPU %
-                                columns.RelativeColumn(3);     // RAM
-                                columns.RelativeColumn(3);     // Disk C
+                                columns.RelativeColumn(1.5f);     // RAM
+                                columns.RelativeColumn(1.5f);  // Disk C
                                 columns.RelativeColumn(1.5f);  // Disk D %
                                 columns.RelativeColumn(1.5f);  // Disk E %
                                 columns.RelativeColumn(1.5f);  // Uptime
@@ -142,7 +142,7 @@ public class PdfReportService
                                 DataCell(device.LastStatus ?? "N/A");
                                 DataCell(device.HealthStatus.ToString()); 
                                 DataCell(device.LatestCpuLoadPercentage.HasValue ? $"{device.LatestCpuLoadPercentage:F2}%" : "N/A");
-                                DataCell(FormatStorage(device.LatestUsedRamKBytes, device.LatestTotalRamKBytes, device.LatestMemoryUsagePercentage));
+                                DataCell(device.LatestMemoryUsagePercentage.HasValue ? $"{device.LatestMemoryUsagePercentage:F2}%" : "N/A");
                                 DataCell(device.LatestDiskCUsagePercentage.HasValue ? $"{device.LatestDiskCUsagePercentage:F2}%" : "N/A");
                                 DataCell(device.LatestDiskDUsagePercentage.HasValue ? $"{device.LatestDiskDUsagePercentage:F2}%" : "N/A");
                                 DataCell(device.LatestDiskEUsagePercentage.HasValue ? $"{device.LatestDiskEUsagePercentage:F2}%" : "N/A");
