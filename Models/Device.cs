@@ -41,7 +41,7 @@ namespace LoginWeb.Models
         public DateTime? LastCheckTimestamp { get; set; }
         public DateTime? LastErrorTimestamp { get; set; }
         public string? LastErrorMessage { get; set; }
-
+        public DateTime? WarningStateTimestamp { get; set; }
         public DeviceHealth HealthStatus { get; set; } = DeviceHealth.Unknown;
         public string? HealthStatusReason { get; set; }
         // --- SNMP v2c Configuration ---

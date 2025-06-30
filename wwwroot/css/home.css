@@ -112,17 +112,17 @@
 @media (min-width: 1201px) {
     .col-last-check {
         /* Prevents the date and time from ever wrapping */
-        white-space: nowrap;
+        width: 130px;
     }
 
     .col-uptime {
         /* Sets a fixed width for the Uptime column on desktop */
-        width: 130px;
+        width: 70px;
     }
 
     /* Give all disk columns an equal, fixed width */
     .col-disk {
-        width: 130px;
+        width: 150px;
     }
 }
 

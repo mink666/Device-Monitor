@@ -19,7 +19,7 @@ namespace LoginWeb.Services
         public async Task SendEmailAsync(string toEmail, string subject, string message)
         {
             var email = new MimeMessage();
-            email.From.Add(new MailboxAddress("Device Monitor App", _config["EmailSettings:FromEmail"]));
+            email.From.Add(new MailboxAddress("SmarTrack", _config["EmailSettings:FromEmail"]));
             email.To.Add(new MailboxAddress("", toEmail));
             email.Subject = subject;
             email.Body = new TextPart("html") { Text = message };

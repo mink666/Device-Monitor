@@ -106,11 +106,7 @@ function renderDeviceIcons(devices) {
                 card.classList.add('selected');
             }
 
-            //card.innerHTML = `
-            //    <i class="bi bi-pc-display"></i>
-            //    <div class="device-card-name">${truncateTextJS(device.name, 20)}</div>
-            //`;
-            card.innerHTML = `<i class="bi bi-pc-display"></i><div class="device-card-name">${displayName}</div>`;
+            card.innerHTML = `<i class="bi bi-pc"></i><div class="device-card-name">${displayName}</div>`;
 
             card.addEventListener("click", () => {
                 selectedDeviceId = device.id;
@@ -160,90 +156,116 @@ function displayDeviceDetails(deviceId) {
         <tr><th scope="row">Health Reason</th><td>${device.healthStatusReason || "N/A"}</td></tr>
     `;
 
-    // --- Update Metric Graphs ---
+    // In device.js, inside displayDeviceDetails()
+
+    // --- Update Metric Graphs with Individual Health Coloring ---
+
     // CPU
     const cpuBar = document.getElementById("details-cpu-bar");
-    const cpuPercent = device.latestCpuLoadPercentage || 0;
-    cpuBar.style.width = `${cpuPercent.toFixed(2)}%`;
-    cpuBar.setAttribute('aria-valuenow', cpuPercent.toFixed(2));
-    cpuBar.innerText = `${cpuPercent.toFixed(2)}%`;
-    document.getElementById("details-cpu-label").innerText = `${cpuPercent.toFixed(2)}%`;
+    const cpuLabel = document.getElementById("details-cpu-label");
+    const cpuPercent = device.latestCpuLoadPercentage;
+    cpuBar.className = `progress-bar ${getProgressBarClassByValue(cpuPercent, device.effectiveCpuThreshold)}`;
+    cpuBar.style.width = cpuPercent != null ? `${cpuPercent.toFixed(2)}%` : '100%';
+    cpuBar.textContent = cpuPercent != null ? `${cpuPercent.toFixed(2)}%` : 'N/A';
+    if (cpuLabel) cpuLabel.textContent = cpuPercent != null ? `${cpuPercent.toFixed(2)}%` : 'N/A';
+
 
     // RAM
     const ramBar = document.getElementById("details-ram-bar");
-    const ramPercent = device.latestMemoryUsagePercentage || 0;
-    ramBar.style.width = `${ramPercent.toFixed(2)}%`;
-    ramBar.setAttribute('aria-valuenow', ramPercent.toFixed(2));
-    ramBar.innerText = `${ramPercent.toFixed(2)}%`;
-    document.getElementById("details-ram-label").innerText = formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage);
+    const ramLabel = document.getElementById("details-ram-label");
+    const ramPercent = device.latestMemoryUsagePercentage;
+    ramBar.className = `progress-bar ${getProgressBarClassByValue(ramPercent, device.effectiveRamThreshold)}`;
+    ramBar.style.width = ramPercent != null ? `${ramPercent.toFixed(2)}%` : '100%';
+    ramBar.textContent = ramPercent != null ? `${ramPercent.toFixed(2)}%` : 'N/A';
+    if (ramLabel) ramLabel.textContent = formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, ramPercent);
+
 
     // Handle Disk C
     const diskCBar = document.getElementById('details-disk-c-bar');
     const diskCLabel = document.getElementById('details-disk-c-label');
-    if (device.latestDiskCUsagePercentage != null) {
-        const percent = device.latestDiskCUsagePercentage;
-        diskCBar.style.width = `${percent.toFixed(2)}%`;
-        diskCBar.textContent = `${percent.toFixed(2)}%`;
-        diskCLabel.textContent = formatStorageJS(device.latestUsedDiskCKBytes, device.latestTotalDiskCKBytes, percent);
-    } else {
-        diskCBar.style.width = '0%';
-        diskCBar.textContent = 'N/A';
-        diskCLabel.textContent = 'N/A';
-    }
+    const diskCPercent = device.latestDiskCUsagePercentage;
+    diskCBar.className = `progress-bar ${getProgressBarClassByValue(diskCPercent, device.effectiveDiskThreshold)}`;
+    diskCBar.style.width = diskCPercent != null ? `${diskCPercent.toFixed(2)}%` : '100%';
+    diskCBar.textContent = diskCPercent != null ? `${diskCPercent.toFixed(2)}%` : 'N/A';
+    if (diskCLabel) diskCLabel.textContent = formatStorageJS(device.latestUsedDiskCKBytes, device.latestTotalDiskCKBytes, diskCPercent);
 
     // Handle Disk D
     const diskDBar = document.getElementById('details-disk-d-bar');
     const diskDLabel = document.getElementById('details-disk-d-label');
-    if (device.latestDiskDUsagePercentage != null) {
-        const percent = device.latestDiskDUsagePercentage;
-        diskDBar.style.width = `${percent.toFixed(2)}%`;
-        diskDBar.textContent = `${percent.toFixed(2)}%`;
-        diskDLabel.textContent = formatStorageJS(device.latestUsedDiskDKBytes, device.latestTotalDiskDKBytes, percent);
-    } else {
-        diskDBar.style.width = '0%';
-        diskDBar.textContent = 'N/A';
-        diskDLabel.textContent = 'N/A';
-    }
+    const diskDPercent = device.latestDiskDUsagePercentage;
+    diskDBar.className = `progress-bar ${getProgressBarClassByValue(diskDPercent, device.effectiveDiskThreshold)}`;
+    diskDBar.style.width = diskDPercent != null ? `${diskDPercent.toFixed(2)}%` : '100%';
+    diskDBar.textContent = diskDPercent != null ? `${diskDPercent.toFixed(2)}%` : 'N/A';
+    if (diskDLabel) diskDLabel.textContent = formatStorageJS(device.latestUsedDiskDKBytes, device.latestTotalDiskDKBytes, diskDPercent);
+
 
     // Handle Disk E
     const diskEBar = document.getElementById('details-disk-e-bar');
     const diskELabel = document.getElementById('details-disk-e-label');
-    if (device.latestDiskEUsagePercentage != null) {
-        const percent = device.latestDiskEUsagePercentage;
-        diskEBar.style.width = `${percent.toFixed(2)}%`;
-        diskEBar.textContent = `${percent.toFixed(2)}%`;
-        diskELabel.textContent = formatStorageJS(device.latestUsedDiskEKBytes, device.latestTotalDiskEKBytes, percent);
-    } else {
-        diskEBar.style.width = '0%';
-        diskEBar.textContent = 'N/A';
-        diskELabel.textContent = 'N/A';
-    }
+    const diskEPercent = device.latestDiskEUsagePercentage;
+    diskEBar.className = `progress-bar ${getProgressBarClassByValue(diskEPercent, device.effectiveDiskThreshold)}`;
+    diskEBar.style.width = diskEPercent != null ? `${diskEPercent.toFixed(2)}%` : '100%';
+    diskEBar.textContent = diskEPercent != null ? `${diskEPercent.toFixed(2)}%` : 'N/A';
+    if (diskELabel) diskELabel.textContent = formatStorageJS(device.latestUsedDiskEKBytes, device.latestTotalDiskEKBytes, diskEPercent);
 
     // --- Update Generate Report Button ---
     const reportButton = document.getElementById('generate-device-summary-button');
     reportButton.dataset.deviceId = device.id; // Store device ID for the action
     reportButton.dataset.deviceName = device.name; // Store name for the report title
 }
-//Message box function
+function getProgressBarClassByValue(value, warningThreshold) {
+    if (value == null) return 'bg-light text-dark'; // Gray for N/A
+
+    const criticalThreshold = 95;
+
+    if (value > criticalThreshold) return 'bg-danger';
+    if (value > warningThreshold) return 'bg-warning text-dark';
+    return 'bg-success';
+}
+
 function showMessage(message, type = 'success') {
-    const messageBox = document.getElementById('customMessageBox');
-    if (!messageBox) return;
+    const toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) return;
 
-    // Clear any existing timer to prevent premature hiding
-    clearTimeout(messageBoxTimeout);
+    // Create a unique ID for each new toast
+    const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
 
-    // Set the message and style
-    messageBox.textContent = message;
-    messageBox.className = 'message-box'; // Reset classes
-    messageBox.classList.add(type === 'success' ? 'message-box-success' : 'message-box-error');
+    // Determine header style and text based on the message type
+    const toastHeaderClass = type === 'success' ? 'bg-success text-white' : 'bg-danger text-white';
+    const toastHeaderText = type === 'success' ? 'Success' : 'Warning';
 
-    // Show the message box
-    messageBox.style.display = 'block';
+    // Create the full HTML for a Bootstrap Toast element
+    const toastHTML = `
+        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header ${toastHeaderClass}">
+                <strong class="me-auto">${toastHeaderText}</strong>
+                <small>Just now</small>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `;
 
-    // Set a timer to automatically hide the message box after 3 seconds
-    messageBoxTimeout = setTimeout(() => {
-        messageBox.style.display = 'none';
-    }, 3000); // 3000 milliseconds = 3 seconds
+    // Add the new toast's HTML to the container
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+
+    // Get the new toast element we just added
+    const newToastEl = document.getElementById(toastId);
+    if (newToastEl) {
+        const toast = new bootstrap.Toast(newToastEl, {
+            delay: 5000 // Keep the message on screen for 5 seconds
+        });
+
+        // IMPORTANT: After the toast is hidden, remove it from the page to keep the HTML clean
+        newToastEl.addEventListener('hidden.bs.toast', () => {
+            newToastEl.remove();
+        });
+
+        // Show the toast
+        toast.show();
+    }
 }
 //Clear modal function
 function cleanupModalEffects() {
@@ -328,10 +350,10 @@ function createDeviceRow(device) {
         ${healthReasonHtml}
     </td>
     <td data-label="CPU">${formatCpuJS(device.latestCpuLoadPercentage)}</td>
-    <td data-label="RAM">${formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage)}</td>
-    <td data-label="Disk C">${formatStorageJS(device.latestUsedDiskCKBytes, device.latestTotalDiskCKBytes, device.latestDiskCUsagePercentage)}</td>
-    <td data-label="Disk D">${formatStorageJS(device.latestUsedDiskDKBytes, device.latestTotalDiskDKBytes, device.latestDiskDUsagePercentage)}</td>
-    <td data-label="Disk E">${formatStorageJS(device.latestUsedDiskEKBytes, device.latestTotalDiskEKBytes, device.latestDiskEUsagePercentage)}</td>
+    <td data-label="RAM" class="col-disk">${formatStorageJS(device.latestUsedRamKBytes, device.latestTotalRamKBytes, device.latestMemoryUsagePercentage)}</td>
+    <td data-label="Disk C" class="col-disk">${formatStorageJS(device.latestUsedDiskCKBytes, device.latestTotalDiskCKBytes, device.latestDiskCUsagePercentage)}</td>
+    <td data-label="Disk D" class="col-disk">${formatStorageJS(device.latestUsedDiskDKBytes, device.latestTotalDiskDKBytes, device.latestDiskDUsagePercentage)}</td>
+    <td data-label="Disk E" class="col-disk">${formatStorageJS(device.latestUsedDiskEKBytes, device.latestTotalDiskEKBytes, device.latestDiskEUsagePercentage)}</td>
     <td data-label="Uptime" class="col-uptime">${formatUptimeJS(device.latestSysUpTimeSeconds)}</td>
     <td data-label="Last Check" class="col-last-check">${lastCheckDisplay}</td>
     `;

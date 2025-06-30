@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations; // For ILogger
 using LoginWeb.DTOs;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 namespace LoginWeb.Controllers
 {
     [ApiController]
@@ -15,12 +16,13 @@ namespace LoginWeb.Controllers
     public class DeviceController : ControllerBase 
     {
         private readonly AppDbContext _context;
-        private readonly ILogger<DeviceController> _logger; 
-
-        public DeviceController(AppDbContext context, ILogger<DeviceController> logger)
+        private readonly ILogger<DeviceController> _logger;
+        private readonly IConfiguration _configuration;
+        public DeviceController(AppDbContext context, ILogger<DeviceController> logger, IConfiguration configuration)
         {
             _context = context;
             _logger = logger;
+            _configuration = configuration;
         }
 
         // GET: api/Device
@@ -32,6 +34,9 @@ namespace LoginWeb.Controllers
                 var devicesFromDb = await _context.Devices
                     .Include(d => d.Histories.OrderByDescending(h => h.Timestamp).Take(1)) // Eager load latest history
                     .ToListAsync();
+                var globalCpuThreshold = _configuration.GetValue<decimal>("MonitoringSettings:DefaultCpuWarningThreshold");
+                var globalRamThreshold = _configuration.GetValue<decimal>("MonitoringSettings:DefaultRamWarningThreshold");
+                var globalDiskThreshold = _configuration.GetValue<decimal>("MonitoringSettings:DefaultDiskWarningThreshold");
 
                 var devicesData = devicesFromDb.Select(d =>
                 {
@@ -82,6 +87,11 @@ namespace LoginWeb.Controllers
                         // Provide sensible defaults if history doesn't exist yet
                         LastStatus = latestHistory != null ? d.LastStatus : "Pending",
                         HealthStatusReason = latestHistory != null ? d.HealthStatusReason : "This device has not been polled yet.",
+
+                        //Thresholds
+                        EffectiveCpuThreshold = d.CpuWarningThreshold ?? globalCpuThreshold,
+                        EffectiveRamThreshold = d.RamWarningThreshold ?? globalRamThreshold,
+                        EffectiveDiskThreshold = d.DiskWarningThreshold ?? globalDiskThreshold
                     };
                 }).ToList();
 
