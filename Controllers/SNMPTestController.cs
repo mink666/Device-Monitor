@@ -11,10 +11,10 @@ using System.Threading;
 public class SnmpTestController : Controller
 {
     //       '127.0.0.1' means "this same computer". Only use if the SNMP device is running on the same machine as your web app.
-    private const string TargetIp = "42.96.17.217";
+    private const string TargetIp = "";
 
     //       "public" is a common default for read-only access, but might be different.
-    private const string Community = "123456";
+    private const string Community = "";
 
     // Standard SNMP port, usually don't need to change this.
     private const int Port = 161;
